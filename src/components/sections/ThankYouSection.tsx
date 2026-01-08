@@ -36,7 +36,7 @@ export const ThankYouSection: React.FC = () => {
               <p className="text-[10px] md:text-[12px] text-muted-foreground leading-relaxed font-medium">
                 Med all vår kärlek,
                 <br />
-                Ellison & Olle
+                Herr och fru Ellison
               </p>
             </div>
           </div>
