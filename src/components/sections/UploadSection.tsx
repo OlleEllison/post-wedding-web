@@ -29,7 +29,7 @@ export const UploadSection: React.FC = () => {
             <CardContent className="p-0">
               <div className="w-full overflow-hidden rounded-b-lg">
                 <iframe 
-                  src="https://docs.google.com/forms/d/e/1FAIpQLSd5Y4KYiEhpU6DQdiQkMRiOBaEIWIpWDi2pShID5nE7YJpfJA/viewform?embedded=true" 
+                  src="YOUR_PHOTO_UPLOAD_FORM_URL_HERE" 
                   className="w-full h-[600px] md:h-[700px] border-0"
                   title="Photo Upload Form"
                 >
