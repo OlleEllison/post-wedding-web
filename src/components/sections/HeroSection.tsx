@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { WeddingRings } from '../WeddingRings';
 import { useIsMobile } from '@/hooks/use-mobile';
-import komOchFiraText from '@/assets/kom-och-fira-text.png';
 
 // Gallery images
 import gallery1 from '@/assets/gallery/gallery-1.jpeg';
@@ -25,16 +22,8 @@ const galleryImages = [
   gallery11, gallery12
 ];
 
-interface HeroSectionProps {
-  onRSVPClick: () => void;
-}
-
-export const HeroSection: React.FC<HeroSectionProps> = ({ onRSVPClick }) => {
+export const HeroSection: React.FC = () => {
   const isMobile = useIsMobile();
-  const weddingDate = new Date('2026-08-15');
-  const now = new Date();
-  const daysLeft = Math.ceil((weddingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
@@ -56,20 +45,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onRSVPClick }) => {
           </div>
 
           {/* Main Message */}
-          <div className="space-y-4 flex justify-center">
-            <img 
-              src={komOchFiraText} 
-              alt="Kom och fira oss!" 
-              className="h-24 md:h-36 w-auto"
-              style={{
-                filter: 'brightness(0) saturate(100%) invert(25%) sepia(30%) saturate(800%) hue-rotate(60deg) brightness(95%) contrast(90%)',
-                WebkitFontSmoothing: 'antialiased',
-                MozOsxFontSmoothing: 'grayscale',
-                backfaceVisibility: 'hidden',
-                transform: 'translateZ(0) scale(1.001)',
-                willChange: 'transform'
-              } as React.CSSProperties}
-            />
+          <div className="space-y-4">
+            <h1 className="font-lemon-milk font-normal text-[24px] md:text-[36px] text-primary">
+              Tack för att ni firade med oss!
+            </h1>
+            <p className="text-[12px] md:text-[14px] text-muted-foreground">
+              15 Augusti 2026 • Väddö
+            </p>
           </div>
 
           {/* Desktop-only spacer */}
@@ -80,7 +62,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onRSVPClick }) => {
             {/* Left Speech Bubble */}
             <div className={`absolute z-10 transform -rotate-12 ${isMobile ? 'left-2 -top-8 scale-100' : 'left-56 -top-12 scale-150'}`}>
               <div className="bg-white border-2 border-primary rounded-lg px-6 py-3 relative shadow-lg">
-                <p className="font-lemon-milk italic font-light text-[8px] text-primary whitespace-nowrap">Äntligen!</p>
+                <p className="font-lemon-milk italic font-light text-[8px] text-primary whitespace-nowrap">Vi gjorde det!</p>
                 <div className="absolute bottom-[-8px] right-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white"></div>
                 <div className="absolute bottom-[-10px] right-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-primary"></div>
               </div>
@@ -103,38 +85,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onRSVPClick }) => {
             {/* Right Speech Bubble */}
             <div className={`absolute z-10 transform rotate-12 ${isMobile ? 'right-2 -top-8 scale-100' : 'right-56 -top-12 scale-150'}`}>
               <div className="bg-white border-2 border-primary rounded-lg px-6 py-3 relative shadow-lg">
-                <p className="font-lemon-milk italic font-light text-[8px] text-primary whitespace-nowrap">Woop woop!</p>
+                <p className="font-lemon-milk italic font-light text-[8px] text-primary whitespace-nowrap">Tack! 💕</p>
                 <div className="absolute bottom-[-8px] left-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white"></div>
                 <div className="absolute bottom-[-10px] left-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-primary"></div>
               </div>
             </div>
           </div>
 
-          {/* Wedding Date */}
-          <div className="text-center my-8">
-            <p className="font-lemon-milk font-normal text-[18px] md:text-[20px] text-primary">15 Augusti 2026</p>
-            <p className="font-lemon-milk font-normal text-[14px] md:text-[16px] text-muted-foreground mt-2">Väddö</p>
-          </div>
-
-          {/* Countdown - Floating Tag Style */}
+          {/* Married Badge */}
           <div className="flex justify-center mb-12">
             <div className="bg-secondary text-white rounded-full px-8 py-4 shadow-lg inline-flex items-center gap-4">
-              <p className="text-2xl md:text-3xl font-lemon-milk font-normal">{daysLeft} dagar kvar</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = '/savethedate.ics';
-                  link.download = 'savethedate.ics';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="bg-white/20 text-white hover:bg-white/30 rounded-full h-auto py-2 px-3"
-              >
-                <Calendar className="w-4 h-4" />
-              </Button>
+              <p className="text-2xl md:text-3xl font-lemon-milk font-normal">Nu är vi gifta! 💍</p>
             </div>
           </div>
 

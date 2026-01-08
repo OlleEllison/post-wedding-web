@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { HeroSection } from '@/components/sections/HeroSection';
-import { DetailsSection, ImportantInfoSection } from '@/components/sections/DetailsSection';
-import { RSVPSection } from '@/components/sections/RSVPSection';
-import { QuestionsSection } from '@/components/sections/QuestionsSection';
+import { ThankYouSection } from '@/components/sections/ThankYouSection';
+import { PhotoGallerySection } from '@/components/sections/PhotoGallerySection';
+import { UploadSection } from '@/components/sections/UploadSection';
+import { MemoriesSection } from '@/components/sections/MemoriesSection';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
@@ -11,7 +12,7 @@ const Index = () => {
   // Handle scroll to update active section
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['home', 'details', 'rsvp'];
+      const sections = ['home', 'thankyou', 'photos', 'upload', 'memories'];
       const scrollPosition = window.scrollY + 100;
 
       for (const section of sections) {
@@ -30,23 +31,16 @@ const Index = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleRSVPClick = () => {
-    const rsvpElement = document.getElementById('rsvp');
-    if (rsvpElement) {
-      rsvpElement.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-transparent relative">
       <Navigation activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <main className="pt-16 relative z-10" style={{ transform: 'translateZ(0)' }}>
-        <HeroSection onRSVPClick={handleRSVPClick} />
-        <DetailsSection />
-        <QuestionsSection />
-        <ImportantInfoSection />
-        <RSVPSection />
+        <HeroSection />
+        <ThankYouSection />
+        <PhotoGallerySection />
+        <UploadSection />
+        <MemoriesSection />
       </main>
     </div>
   );
