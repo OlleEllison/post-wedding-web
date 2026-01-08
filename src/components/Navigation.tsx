@@ -13,14 +13,10 @@ export const Navigation: React.FC<NavigationProps> = ({ activeSection, onSection
 
   const menuItems = [
     { id: 'home', label: 'Start', icon: Heart },
-    { id: 'schedule', label: 'Tidsschema', icon: Heart },
-    { id: 'location', label: 'Plats', icon: Heart },
-    { id: 'accommodation', label: 'Boende', icon: Heart },
-    { id: 'dresscode', label: 'Klädkod', icon: Heart },
-    { id: 'gifts', label: 'Bröllopsgåvor', icon: Heart },
-    { id: 'tal', label: 'Tal', icon: Heart },
-    { id: 'important', label: 'Övrig info', icon: Heart },
-    { id: 'rsvp', label: 'OSA', icon: Heart },
+    { id: 'thankyou', label: 'Tack', icon: Heart },
+    { id: 'photos', label: 'Bilder', icon: Heart },
+    { id: 'upload', label: 'Ladda upp', icon: Heart },
+    { id: 'memories', label: 'Minnen', icon: Heart },
   ];
 
   const handleMenuClick = (sectionId: string) => {
