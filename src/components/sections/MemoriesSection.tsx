@@ -29,7 +29,7 @@ export const MemoriesSection: React.FC = () => {
             <CardContent className="p-0">
               <div className="w-full overflow-hidden rounded-b-lg">
                 <iframe 
-                  src="https://docs.google.com/forms/d/e/1FAIpQLSd5Y4KYiEhpU6DQdiQkMRiOBaEIWIpWDi2pShID5nE7YJpfJA/viewform?embedded=true" 
+                  src="YOUR_MEMORIES_FORM_URL_HERE" 
                   className="w-full h-[500px] md:h-[600px] border-0"
                   title="Memory Sharing Form"
                 >
