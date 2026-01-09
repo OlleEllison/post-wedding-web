@@ -205,7 +205,7 @@ export const PhotoGallerySection: React.FC = () => {
                       alt={image.alt}
                       className="w-full h-full object-cover"
                     />
-                    {image.isUploaded && (
+                    {image.isNew && (
                       <div className="absolute top-0.5 right-0.5 bg-primary/80 text-primary-foreground text-[6px] px-1 py-0.5 rounded-full">
                         Nytt
                       </div>

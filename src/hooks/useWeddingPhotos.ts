@@ -41,7 +41,15 @@ export interface GalleryImage {
   src: string;
   alt: string;
   isUploaded?: boolean;
+  isNew?: boolean;
 }
+
+const isWithin24Hours = (dateString: string): boolean => {
+  const uploadDate = new Date(dateString);
+  const now = new Date();
+  const hoursDiff = (now.getTime() - uploadDate.getTime()) / (1000 * 60 * 60);
+  return hoursDiff < 24;
+};
 
 export function useWeddingPhotos() {
   const [uploadedPhotos, setUploadedPhotos] = useState<GalleryImage[]>([]);
@@ -63,6 +71,7 @@ export function useWeddingPhotos() {
           src: urlData.publicUrl,
           alt: photo.file_name,
           isUploaded: true,
+          isNew: isWithin24Hours(photo.created_at),
         };
       });
       setUploadedPhotos(photos);
@@ -93,6 +102,7 @@ export function useWeddingPhotos() {
             src: urlData.publicUrl,
             alt: photo.file_name,
             isUploaded: true,
+            isNew: true,
           }, ...prev]);
         }
       )
