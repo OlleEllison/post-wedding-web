@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircleHeart, Send, Smile } from 'lucide-react';
+import { MessageCircleHeart, Send, Smile, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getUserId } from '@/hooks/useWeddingPhotos';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 
@@ -15,6 +16,8 @@ interface Memory {
   name: string;
   message: string;
   created_at: string;
+  posted_by: string | null;
+  canDelete?: boolean;
 }
 
 export const MemoriesSection: React.FC = () => {
@@ -22,9 +25,11 @@ export const MemoriesSection: React.FC = () => {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+  const currentUserId = getUserId();
 
   const handleEmojiSelect = (emoji: { native: string }) => {
     setMessage((prev) => prev + emoji.native);
@@ -41,7 +46,10 @@ export const MemoriesSection: React.FC = () => {
         .order('created_at', { ascending: false });
       
       if (data && !error) {
-        setMemories(data);
+        setMemories(data.map((m: Memory) => ({
+          ...m,
+          canDelete: m.posted_by === currentUserId,
+        })));
       }
     };
 
@@ -53,12 +61,21 @@ export const MemoriesSection: React.FC = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'wedding_memories',
         },
         (payload) => {
-          setMemories((prev) => [payload.new as Memory, ...prev]);
+          if (payload.eventType === 'INSERT') {
+            const newMemory = payload.new as Memory;
+            setMemories((prev) => [{
+              ...newMemory,
+              canDelete: newMemory.posted_by === currentUserId,
+            }, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as Memory).id;
+            setMemories((prev) => prev.filter((m) => m.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -66,7 +83,7 @@ export const MemoriesSection: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUserId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,9 +99,10 @@ export const MemoriesSection: React.FC = () => {
 
     setIsSubmitting(true);
 
+    const userId = getUserId();
     const { error } = await supabase
       .from('wedding_memories')
-      .insert([{ name: name.trim(), message: message.trim() }]);
+      .insert([{ name: name.trim(), message: message.trim(), posted_by: userId }]);
 
     if (error) {
       toast({
@@ -102,6 +120,29 @@ export const MemoriesSection: React.FC = () => {
     }
 
     setIsSubmitting(false);
+  };
+
+  const deleteMemory = async (memoryId: string) => {
+    setIsDeleting(true);
+    const { error } = await supabase
+      .from('wedding_memories')
+      .delete()
+      .eq('id', memoryId);
+
+    if (error) {
+      toast({
+        title: "Kunde inte ta bort",
+        description: "Något gick fel vid borttagning.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Borttaget",
+        description: "Ditt minne har tagits bort.",
+      });
+      setMemories((prev) => prev.filter((m) => m.id !== memoryId));
+    }
+    setIsDeleting(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -198,13 +239,25 @@ export const MemoriesSection: React.FC = () => {
                   className="bg-white/90 backdrop-blur-sm border border-primary/10 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="font-medium text-sm text-foreground">
-                        {memory.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        · {formatDate(memory.created_at)}
-                      </span>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm text-foreground">
+                          {memory.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          · {formatDate(memory.created_at)}
+                        </span>
+                      </div>
+                      {memory.canDelete && (
+                        <button
+                          onClick={() => deleteMemory(memory.id)}
+                          disabled={isDeleting}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                          title="Ta bort"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                     <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words">
                       {memory.message}
