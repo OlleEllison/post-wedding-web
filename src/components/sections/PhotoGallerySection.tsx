@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2 } from 'lucide-react';
+import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
+import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,9 +11,10 @@ const MAX_COLUMNS = 10;
 export const PhotoGallerySection: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { allImages, isLoading } = useWeddingPhotos();
+  const { allImages, isLoading, deletePhoto } = useWeddingPhotos();
   const { toast } = useToast();
 
   const totalPages = Math.ceil(allImages.length / IMAGES_PER_PAGE);
@@ -56,6 +57,27 @@ export const PhotoGallerySection: React.FC = () => {
   const goToNext = () => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex((selectedImageIndex + 1) % allImages.length);
+  };
+
+  const handleDeletePhoto = async (photoId: string, filePath: string) => {
+    setIsDeleting(true);
+    const { error } = await deletePhoto(photoId, filePath);
+    if (error) {
+      toast({
+        title: "Kunde inte ta bort",
+        description: "Något gick fel vid borttagning av bilden.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Borttagen",
+        description: "Bilden har tagits bort.",
+      });
+      if (selectedImageIndex !== null && selectedImageIndex >= allImages.length - 1) {
+        setSelectedImageIndex(Math.max(0, allImages.length - 2));
+      }
+    }
+    setIsDeleting(false);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,10 +125,11 @@ export const PhotoGallerySection: React.FC = () => {
         continue;
       }
 
-      // Save to database
+      // Save to database with user ID
+      const userId = getUserId();
       const { error: dbError } = await supabase
         .from('wedding_photos')
-        .insert([{ file_path: filePath, file_name: file.name }]);
+        .insert([{ file_path: filePath, file_name: file.name, uploaded_by: userId }]);
 
       if (dbError) {
         toast({
@@ -196,8 +219,8 @@ export const PhotoGallerySection: React.FC = () => {
               >
                 {currentImages.map((image, index) => (
                   <div 
-                    key={index}
-                    className="relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-transform duration-300"
+                    key={image.id || index}
+                    className="relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-transform duration-300 group"
                     onClick={() => openLightbox(index)}
                   >
                     <img
@@ -209,6 +232,20 @@ export const PhotoGallerySection: React.FC = () => {
                       <div className="absolute top-0.5 right-0.5 bg-primary/80 text-primary-foreground text-[6px] px-1 py-0.5 rounded-full">
                         Nytt
                       </div>
+                    )}
+                    {image.canDelete && (
+                      <button
+                        className="absolute bottom-0.5 right-0.5 bg-destructive/80 text-destructive-foreground p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (image.id && image.filePath) {
+                            handleDeletePhoto(image.id, image.filePath);
+                          }
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 size={10} />
+                      </button>
                     )}
                   </div>
                 ))}
@@ -285,8 +322,27 @@ export const PhotoGallerySection: React.FC = () => {
                 <ChevronRight size={40} />
               </button>
               
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
-                {selectedImageIndex + 1} / {allImages.length}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                <span className="text-white text-sm">
+                  {selectedImageIndex + 1} / {allImages.length}
+                </span>
+                {allImages[selectedImageIndex].canDelete && (
+                  <button
+                    className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-sm flex items-center gap-1 hover:bg-destructive transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const img = allImages[selectedImageIndex];
+                      if (img.id && img.filePath) {
+                        handleDeletePhoto(img.id, img.filePath);
+                        closeLightbox();
+                      }
+                    }}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 size={14} />
+                    Ta bort
+                  </button>
+                )}
               </div>
             </div>
           )}
