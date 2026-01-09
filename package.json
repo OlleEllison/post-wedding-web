@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@fontsource/dancing-script": "^5.2.8",
     "@fontsource/indie-flower": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
