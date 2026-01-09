@@ -40,6 +40,7 @@ export const PhotoGallerySection: React.FC = () => {
 
   const openLightbox = (index: number) => {
     const globalIndex = currentPage * IMAGES_PER_PAGE + index;
+    console.log('Opening lightbox:', { index, globalIndex, image: allImages[globalIndex], canDelete: allImages[globalIndex]?.canDelete });
     setSelectedImageIndex(globalIndex);
   };
 
@@ -281,7 +282,7 @@ export const PhotoGallerySection: React.FC = () => {
           )}
 
           {/* Lightbox */}
-          {selectedImageIndex !== null && (
+          {selectedImageIndex !== null && allImages[selectedImageIndex] && (
             <div 
               className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
               onClick={closeLightbox}
@@ -324,7 +325,7 @@ export const PhotoGallerySection: React.FC = () => {
                 <span className="text-white text-sm">
                   {selectedImageIndex + 1} / {allImages.length}
                 </span>
-                {allImages[selectedImageIndex].canDelete && (
+                {allImages[selectedImageIndex]?.canDelete && (
                   <button
                     className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-sm flex items-center gap-1 hover:bg-destructive transition-colors"
                     onClick={(e) => {
