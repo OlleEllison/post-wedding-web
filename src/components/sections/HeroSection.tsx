@@ -1,38 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { WeddingRings } from '../WeddingRings';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-// Gallery images
-import gallery1 from '@/assets/gallery/gallery-1.jpeg';
-import gallery2 from '@/assets/gallery/gallery-2.jpeg';
-import gallery3 from '@/assets/gallery/gallery-3.jpeg';
-import gallery4 from '@/assets/gallery/gallery-4.jpeg';
-import gallery5 from '@/assets/gallery/gallery-5.jpeg';
-import gallery6 from '@/assets/gallery/gallery-6.jpeg';
-import gallery7 from '@/assets/gallery/gallery-7.jpeg';
-import gallery8 from '@/assets/gallery/gallery-8.jpeg';
-import gallery9 from '@/assets/gallery/gallery-9.jpeg';
-import gallery10 from '@/assets/gallery/gallery-10.jpeg';
-import gallery11 from '@/assets/gallery/gallery-11.jpeg';
-import gallery12 from '@/assets/gallery/gallery-12.jpeg';
-
-const galleryImages = [
-  gallery1, gallery2, gallery3, gallery4, gallery5,
-  gallery6, gallery7, gallery8, gallery9, gallery10,
-  gallery11, gallery12
-];
+import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
 
 export const HeroSection: React.FC = () => {
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { allImages } = useWeddingPhotos();
 
   useEffect(() => {
+    if (allImages.length === 0) return;
+    
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
     }, 5000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [allImages.length]);
 
   return (
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -70,16 +54,22 @@ export const HeroSection: React.FC = () => {
 
             {/* Rotating Gallery */}
             <div className="relative w-64 md:w-80 h-80 md:h-96 rounded-lg shadow-xl overflow-hidden">
-              {galleryImages.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Ellison och Olle ${index + 1}`}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                    index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-              ))}
+              {allImages.length > 0 ? (
+                allImages.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image.src}
+                    alt={image.alt}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                      index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                ))
+              ) : (
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                  <p className="text-muted-foreground text-sm">Laddar bilder...</p>
+                </div>
+              )}
             </div>
 
             {/* Right Speech Bubble */}
