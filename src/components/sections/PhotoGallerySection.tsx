@@ -41,12 +41,10 @@ export const PhotoGallerySection: React.FC = () => {
   const openLightbox = (index: number) => {
     const globalIndex = currentPage * IMAGES_PER_PAGE + index;
     setSelectedImageIndex(globalIndex);
-    document.body.style.overflow = 'hidden';
   };
 
   const closeLightbox = () => {
     setSelectedImageIndex(null);
-    document.body.style.overflow = 'auto';
   };
 
   const goToPrevious = () => {
