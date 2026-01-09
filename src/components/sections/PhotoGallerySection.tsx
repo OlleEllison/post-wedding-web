@@ -284,18 +284,18 @@ export const PhotoGallerySection: React.FC = () => {
           {/* Lightbox */}
           {selectedImageIndex !== null && allImages[selectedImageIndex] && (
             <div 
-              className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+              className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
               onClick={closeLightbox}
             >
               <button
-                className="absolute top-4 right-4 text-white hover:text-primary transition-colors"
+                className="absolute top-4 right-4 text-white hover:text-primary transition-colors z-10"
                 onClick={closeLightbox}
               >
                 <X size={32} />
               </button>
               
               <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-primary transition-colors p-2"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-primary transition-colors p-2 z-10"
                 onClick={(e) => {
                   e.stopPropagation();
                   goToPrevious();
@@ -304,15 +304,39 @@ export const PhotoGallerySection: React.FC = () => {
                 <ChevronLeft size={40} />
               </button>
               
-              <img
-                src={allImages[selectedImageIndex].src}
-                alt={allImages[selectedImageIndex].alt}
-                className="max-w-[90vw] max-h-[90vh] object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
+              <div className="flex flex-col items-center gap-3 max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
+                <img
+                  src={allImages[selectedImageIndex].src}
+                  alt={allImages[selectedImageIndex].alt}
+                  className="max-w-[90vw] max-h-[80vh] object-contain"
+                />
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-white text-sm">
+                    {selectedImageIndex + 1} / {allImages.length}
+                  </span>
+                  {allImages[selectedImageIndex]?.canDelete && (
+                    <button
+                      className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-sm flex items-center gap-1 hover:bg-destructive transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const img = allImages[selectedImageIndex];
+                        if (img.id && img.filePath) {
+                          handleDeletePhoto(img.id, img.filePath);
+                          closeLightbox();
+                        }
+                      }}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 size={14} />
+                      Ta bort
+                    </button>
+                  )}
+                </div>
+              </div>
               
               <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-primary transition-colors p-2"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-primary transition-colors p-2 z-10"
                 onClick={(e) => {
                   e.stopPropagation();
                   goToNext();
@@ -320,29 +344,6 @@ export const PhotoGallerySection: React.FC = () => {
               >
                 <ChevronRight size={40} />
               </button>
-              
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                <span className="text-white text-sm">
-                  {selectedImageIndex + 1} / {allImages.length}
-                </span>
-                {allImages[selectedImageIndex]?.canDelete && (
-                  <button
-                    className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-sm flex items-center gap-1 hover:bg-destructive transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const img = allImages[selectedImageIndex];
-                      if (img.id && img.filePath) {
-                        handleDeletePhoto(img.id, img.filePath);
-                        closeLightbox();
-                      }
-                    }}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 size={14} />
-                    Ta bort
-                  </button>
-                )}
-              </div>
             </div>
           )}
         </div>
