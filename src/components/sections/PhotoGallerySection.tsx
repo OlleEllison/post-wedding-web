@@ -288,13 +288,6 @@ export const PhotoGallerySection: React.FC = () => {
               onClick={closeLightbox}
             >
               <button
-                className="absolute top-4 right-4 text-white hover:text-primary transition-colors z-10"
-                onClick={closeLightbox}
-              >
-                <X size={32} />
-              </button>
-              
-              <button
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-primary transition-colors p-2 z-10"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -304,11 +297,18 @@ export const PhotoGallerySection: React.FC = () => {
                 <ChevronLeft size={40} />
               </button>
               
-              <div className="flex flex-col items-center gap-3 max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-col items-center gap-3 max-h-[95vh] relative" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="absolute -top-2 -right-2 text-white hover:text-primary transition-colors bg-black/50 rounded-full p-1 z-10"
+                  onClick={closeLightbox}
+                >
+                  <X size={24} />
+                </button>
+                
                 <img
                   src={allImages[selectedImageIndex].src}
                   alt={allImages[selectedImageIndex].alt}
-                  className="max-w-[90vw] max-h-[80vh] object-contain"
+                  className="max-w-[85vw] max-h-[75vh] object-contain rounded-lg"
                 />
                 
                 <div className="flex items-center gap-4">
