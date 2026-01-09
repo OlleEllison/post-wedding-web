@@ -8,6 +8,13 @@ export const HeroSection: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { allImages } = useWeddingPhotos();
 
+  // Reset index if it exceeds the current array length (e.g., after image deletion)
+  useEffect(() => {
+    if (currentImageIndex >= allImages.length && allImages.length > 0) {
+      setCurrentImageIndex(0);
+    }
+  }, [allImages.length, currentImageIndex]);
+
   useEffect(() => {
     if (allImages.length === 0) return;
     
