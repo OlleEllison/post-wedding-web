@@ -35,14 +35,29 @@ interface WeddingPhoto {
   file_path: string;
   file_name: string;
   created_at: string;
+  uploaded_by: string | null;
 }
 
 export interface GalleryImage {
+  id?: string;
   src: string;
   alt: string;
+  filePath?: string;
   isUploaded?: boolean;
   isNew?: boolean;
+  canDelete?: boolean;
 }
+
+// Get or create a unique user ID for this browser
+export const getUserId = (): string => {
+  const storageKey = 'wedding-user-id';
+  let userId = localStorage.getItem(storageKey);
+  if (!userId) {
+    userId = crypto.randomUUID();
+    localStorage.setItem(storageKey, userId);
+  }
+  return userId;
+};
 
 const isWithin24Hours = (dateString: string): boolean => {
   const uploadDate = new Date(dateString);
@@ -54,6 +69,7 @@ const isWithin24Hours = (dateString: string): boolean => {
 export function useWeddingPhotos() {
   const [uploadedPhotos, setUploadedPhotos] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const currentUserId = getUserId();
 
   const fetchPhotos = async () => {
     const { data, error } = await supabase
@@ -68,15 +84,35 @@ export function useWeddingPhotos() {
           .getPublicUrl(photo.file_path);
         
         return {
+          id: photo.id,
           src: urlData.publicUrl,
           alt: photo.file_name,
+          filePath: photo.file_path,
           isUploaded: true,
           isNew: isWithin24Hours(photo.created_at),
+          canDelete: photo.uploaded_by === currentUserId,
         };
       });
       setUploadedPhotos(photos);
     }
     setIsLoading(false);
+  };
+
+  const deletePhoto = async (photoId: string, filePath: string) => {
+    // Delete from storage
+    await supabase.storage.from('wedding-photos').remove([filePath]);
+    
+    // Delete from database
+    const { error } = await supabase
+      .from('wedding_photos')
+      .delete()
+      .eq('id', photoId);
+
+    if (!error) {
+      setUploadedPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    }
+    
+    return { error };
   };
 
   useEffect(() => {
@@ -88,22 +124,30 @@ export function useWeddingPhotos() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'wedding_photos',
         },
         (payload) => {
-          const photo = payload.new as WeddingPhoto;
-          const { data: urlData } = supabase.storage
-            .from('wedding-photos')
-            .getPublicUrl(photo.file_path);
-          
-          setUploadedPhotos((prev) => [{
-            src: urlData.publicUrl,
-            alt: photo.file_name,
-            isUploaded: true,
-            isNew: true,
-          }, ...prev]);
+          if (payload.eventType === 'INSERT') {
+            const photo = payload.new as WeddingPhoto;
+            const { data: urlData } = supabase.storage
+              .from('wedding-photos')
+              .getPublicUrl(photo.file_path);
+            
+            setUploadedPhotos((prev) => [{
+              id: photo.id,
+              src: urlData.publicUrl,
+              alt: photo.file_name,
+              filePath: photo.file_path,
+              isUploaded: true,
+              isNew: true,
+              canDelete: photo.uploaded_by === currentUserId,
+            }, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as WeddingPhoto).id;
+            setUploadedPhotos((prev) => prev.filter((p) => p.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -111,7 +155,7 @@ export function useWeddingPhotos() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUserId]);
 
   // Combine uploaded photos with static images
   const allImages: GalleryImage[] = [...uploadedPhotos, ...staticImages];
@@ -121,6 +165,7 @@ export function useWeddingPhotos() {
     uploadedPhotos, 
     staticImages, 
     isLoading,
-    refetch: fetchPhotos 
+    refetch: fetchPhotos,
+    deletePhoto,
   };
 }
