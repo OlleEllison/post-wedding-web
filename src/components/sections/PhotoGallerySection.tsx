@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, X, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Gallery images
 import gallery1 from '@/assets/gallery/gallery-1.jpeg';
@@ -68,27 +67,9 @@ export const PhotoGallerySection: React.FC = () => {
             <h2 className="font-lemon-milk font-normal text-[18px] md:text-[20px] text-primary">
               Bilder från dagen
             </h2>
-            <p className="text-[10px] md:text-[12px] text-muted-foreground">
-              Klicka på en bild för att förstora
+            <p className="text-[10px] md:text-[12px] text-muted-foreground max-w-md mx-auto">
+              Har du bilder från bröllopet? Ladda upp dem här så samlar vi alla minnen på ett ställe!
             </p>
-          </div>
-
-          {/* Upload Button */}
-          <div className="text-center">
-            <Button 
-              variant="outline" 
-              className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              onClick={() => {
-                // This will be connected to the upload form section
-                const element = document.getElementById('upload');
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-            >
-              <Upload className="mr-2" size={16} />
-              Ladda upp dina bilder
-            </Button>
           </div>
 
           {/* Photo Grid */}

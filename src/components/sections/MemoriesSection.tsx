@@ -139,10 +139,7 @@ export const MemoriesSection: React.FC = () => {
                   className="bg-white min-h-[100px]"
                   maxLength={280}
                 />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">
-                    {message.length}/280
-                  </span>
+                <div className="flex justify-end">
                   <Button 
                     type="submit" 
                     disabled={isSubmitting}
@@ -158,41 +155,27 @@ export const MemoriesSection: React.FC = () => {
 
           {/* Memories Feed */}
           {memories.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="text-center font-lemon-milk text-[12px] text-muted-foreground">
-                Gästernas minnen
-              </h4>
-              <div className="space-y-3">
-                {memories.map((memory) => (
-                  <Card 
-                    key={memory.id} 
-                    className="bg-white/90 backdrop-blur-sm border border-primary/10 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary font-medium text-sm">
-                            {memory.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm text-foreground">
-                              {memory.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              · {formatDate(memory.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-foreground/80 mt-1 whitespace-pre-wrap break-words">
-                            {memory.message}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="space-y-3">
+              {memories.map((memory) => (
+                <Card 
+                  key={memory.id} 
+                  className="bg-white/90 backdrop-blur-sm border border-primary/10 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="font-medium text-sm text-foreground">
+                        {memory.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        · {formatDate(memory.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words">
+                      {memory.message}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
 

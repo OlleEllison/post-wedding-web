@@ -3,7 +3,6 @@ import { Navigation } from '@/components/Navigation';
 import { HeroSection } from '@/components/sections/HeroSection';
 import { ThankYouSection } from '@/components/sections/ThankYouSection';
 import { PhotoGallerySection } from '@/components/sections/PhotoGallerySection';
-import { UploadSection } from '@/components/sections/UploadSection';
 import { MemoriesSection } from '@/components/sections/MemoriesSection';
 
 const Index = () => {
@@ -12,7 +11,7 @@ const Index = () => {
   // Handle scroll to update active section
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['home', 'thankyou', 'photos', 'upload', 'memories'];
+      const sections = ['home', 'thankyou', 'photos', 'memories'];
       const scrollPosition = window.scrollY + 100;
 
       for (const section of sections) {
@@ -39,7 +38,6 @@ const Index = () => {
         <HeroSection />
         <ThankYouSection />
         <PhotoGallerySection />
-        <UploadSection />
         <MemoriesSection />
       </main>
     </div>
