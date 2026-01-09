@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
@@ -40,23 +40,45 @@ export const PhotoGallerySection: React.FC = () => {
 
   const openLightbox = (index: number) => {
     const globalIndex = currentPage * IMAGES_PER_PAGE + index;
-    console.log('Opening lightbox:', { index, globalIndex, image: allImages[globalIndex], canDelete: allImages[globalIndex]?.canDelete });
     setSelectedImageIndex(globalIndex);
   };
 
-  const closeLightbox = () => {
+  const closeLightbox = useCallback(() => {
     setSelectedImageIndex(null);
-  };
+  }, []);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex((selectedImageIndex - 1 + allImages.length) % allImages.length);
-  };
+  }, [selectedImageIndex, allImages.length]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex((selectedImageIndex + 1) % allImages.length);
-  };
+  }, [selectedImageIndex, allImages.length]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImageIndex === null) return;
+      
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case 'ArrowLeft':
+          goToPrevious();
+          break;
+        case 'ArrowRight':
+          goToNext();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIndex, closeLightbox, goToPrevious, goToNext]);
+
 
   const handleDeletePhoto = async (photoId: string, filePath: string) => {
     setIsDeleting(true);
