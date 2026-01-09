@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { MessageCircleHeart, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageCircleHeart, Send, Smile } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
 interface Memory {
   id: string;
@@ -19,7 +22,15 @@ export const MemoriesSection: React.FC = () => {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+
+  const handleEmojiSelect = (emoji: { native: string }) => {
+    setMessage((prev) => prev + emoji.native);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
+  };
 
   // Fetch existing memories
   useEffect(() => {
@@ -132,13 +143,38 @@ export const MemoriesSection: React.FC = () => {
                   className="bg-white"
                   maxLength={50}
                 />
-                <Textarea
-                  placeholder="Skriv ditt minne här..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="bg-white min-h-[100px]"
-                  maxLength={280}
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={textareaRef}
+                    placeholder="Skriv ditt minne här..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="bg-white min-h-[100px] pr-12"
+                    maxLength={280}
+                  />
+                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <Smile size={20} />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border-none" align="end">
+                      <Picker
+                        data={data}
+                        onEmojiSelect={handleEmojiSelect}
+                        theme="light"
+                        locale="sv"
+                        previewPosition="none"
+                        skinTonePosition="none"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <div className="flex justify-end">
                   <Button 
                     type="submit" 
