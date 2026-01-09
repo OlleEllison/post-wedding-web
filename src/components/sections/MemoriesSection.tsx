@@ -240,14 +240,9 @@ export const MemoriesSection: React.FC = () => {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm text-foreground">
-                          {memory.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          · {formatDate(memory.created_at)}
-                        </span>
-                      </div>
+                      <span className="font-medium text-sm text-foreground">
+                        {memory.name}
+                      </span>
                       {memory.canDelete && (
                         <button
                           onClick={() => deleteMemory(memory.id)}
