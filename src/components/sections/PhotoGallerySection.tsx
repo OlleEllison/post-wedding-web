@@ -235,7 +235,7 @@ export const PhotoGallerySection: React.FC = () => {
                     )}
                     {image.canDelete && (
                       <button
-                        className="absolute bottom-0.5 right-0.5 bg-destructive/80 text-destructive-foreground p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (image.id && image.filePath) {
@@ -244,7 +244,7 @@ export const PhotoGallerySection: React.FC = () => {
                         }}
                         disabled={isDeleting}
                       >
-                        <Trash2 size={10} />
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>
