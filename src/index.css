@@ -136,31 +136,50 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    /* Explicit cream/white background color as fallback */
+    background-color: hsl(60 20% 98%);
     font-family: 'Lemon Milk', 'Times New Roman', Times, serif;
     font-weight: 300;
     font-size: 10px;
     line-height: 1;
     position: relative;
     overflow-x: hidden;
+    /* Ensure body covers full viewport on iOS */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
   }
   
-  /* Parallax Background */
+  /* Parallax Background - iOS Safari compatible */
   body::before {
     content: '';
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100vw;
-    height: 100vh;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    /* Fallback cream color before image loads */
+    background-color: hsl(60 20% 97%);
     background-image: url('/src/assets/background-pattern.png');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
+    background-attachment: scroll; /* 'fixed' causes issues on iOS */
     z-index: -1;
     opacity: 0.85;
     filter: sepia(20%) saturate(150%) hue-rotate(60deg) brightness(1.05);
+    /* Prevent iOS Safari rendering issues */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* iOS Safari viewport fix */
+  @supports (-webkit-touch-callout: none) {
+    body::before {
+      height: -webkit-fill-available;
+    }
   }
   
   /* Parallax wrapper */
