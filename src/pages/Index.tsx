@@ -4,6 +4,7 @@ import { HeroSection } from '@/components/sections/HeroSection';
 import { ThankYouSection } from '@/components/sections/ThankYouSection';
 import { PhotoGallerySection } from '@/components/sections/PhotoGallerySection';
 import { MemoriesSection } from '@/components/sections/MemoriesSection';
+import { PasswordGate } from '@/components/PasswordGate';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('home');
@@ -31,16 +32,18 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-transparent relative">
-      <Navigation activeSection={activeSection} onSectionChange={setActiveSection} />
-      
-      <main className="pt-16 relative z-10" style={{ transform: 'translateZ(0)' }}>
-        <HeroSection />
-        <ThankYouSection />
-        <PhotoGallerySection />
-        <MemoriesSection />
-      </main>
-    </div>
+    <PasswordGate>
+      <div className="min-h-screen bg-transparent relative">
+        <Navigation activeSection={activeSection} onSectionChange={setActiveSection} />
+        
+        <main className="pt-16 relative z-10" style={{ transform: 'translateZ(0)' }}>
+          <HeroSection />
+          <ThankYouSection />
+          <PhotoGallerySection />
+          <MemoriesSection />
+        </main>
+      </div>
+    </PasswordGate>
   );
 };
 
