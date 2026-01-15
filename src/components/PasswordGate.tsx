@@ -63,7 +63,7 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ children }) => {
   // Still checking localStorage
   if (isUnlocked === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/10 to-background">
+      <div className="min-h-screen min-h-[-webkit-fill-available] flex items-center justify-center bg-transparent">
         <div className="animate-pulse">
           <Heart className="w-12 h-12 text-primary" />
         </div>
@@ -74,7 +74,7 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ children }) => {
   // Show password form
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/10 to-background p-4">
+      <div className="min-h-screen min-h-[-webkit-fill-available] flex items-center justify-center bg-transparent p-4">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-2xl shadow-xl p-8 border border-border">
             <div className="text-center mb-8">
