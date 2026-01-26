@@ -1,3 +1,5 @@
+@import './ios-safari-fix.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -150,7 +152,7 @@ All colors MUST be HSL.
     min-height: -webkit-fill-available;
   }
   
-  /* Parallax Background - iOS Safari compatible */
+  /* Background Layer 1: Cream base */
   body::before {
     content: '';
     position: fixed;
@@ -160,26 +162,32 @@ All colors MUST be HSL.
     bottom: 0;
     width: 100%;
     height: 100%;
-    /* Cream background matching --wedding-cream */
-    background-color: hsl(60 20% 97%);
-    background-image: url('/src/assets/background-pattern.png');
+    background-color: hsl(60 20% 97%); /* cream base */
+    z-index: -2;
+  }
+
+  /* Background Layer 2: Pattern overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/background-pattern-green.png?v=2');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
-    background-attachment: scroll; /* 'fixed' causes issues on iOS */
     z-index: -1;
-    /* Green tint filter to match primary/secondary green theme (95° hue) */
-    filter: sepia(15%) saturate(120%) hue-rotate(55deg) brightness(1.02);
-    /* Prevent iOS Safari rendering issues */
+    opacity: 0.15;
+    filter: none;
+    mix-blend-mode: normal;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-  }
-  
-  /* iOS Safari viewport fix */
-  @supports (-webkit-touch-callout: none) {
-    body::before {
-      height: -webkit-fill-available;
-    }
   }
   
   /* Parallax wrapper */
