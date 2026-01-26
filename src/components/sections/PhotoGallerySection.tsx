@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2 } from 'lucide-react';
+import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2, Download, Check, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +12,9 @@ export const PhotoGallerySection: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedForDownload, setSelectedForDownload] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { allImages, isLoading, deletePhoto } = useWeddingPhotos();
@@ -39,6 +42,7 @@ export const PhotoGallerySection: React.FC = () => {
   }, [currentImages.length]);
 
   const openLightbox = (index: number) => {
+    if (isSelectMode) return; // Don't open lightbox in select mode
     const globalIndex = currentPage * IMAGES_PER_PAGE + index;
     setSelectedImageIndex(globalIndex);
   };
@@ -46,6 +50,92 @@ export const PhotoGallerySection: React.FC = () => {
   const closeLightbox = useCallback(() => {
     setSelectedImageIndex(null);
   }, []);
+
+  const toggleImageSelection = (globalIndex: number) => {
+    setSelectedForDownload(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(globalIndex)) {
+        newSet.delete(globalIndex);
+      } else {
+        newSet.add(globalIndex);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllImages = () => {
+    const allIndices = new Set(allImages.map((_, index) => index));
+    setSelectedForDownload(allIndices);
+  };
+
+  const clearSelection = () => {
+    setSelectedForDownload(new Set());
+  };
+
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedForDownload(new Set());
+  };
+
+  const downloadSelectedImages = async () => {
+    if (selectedForDownload.size === 0) {
+      toast({
+        title: "Inga bilder valda",
+        description: "Välj minst en bild att ladda ner.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      for (const index of selectedForDownload) {
+        const image = allImages[index];
+        if (!image) continue;
+
+        // Fetch the image
+        const response = await fetch(image.src);
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = image.alt || `wedding-photo-${index + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // Small delay between downloads to prevent browser issues
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      toast({
+        title: "Nedladdning klar! 📥",
+        description: `${selectedForDownload.size} bild${selectedForDownload.size > 1 ? 'er' : ''} har laddats ner.`,
+      });
+
+      exitSelectMode();
+    } catch (error) {
+      toast({
+        title: "Nedladdning misslyckades",
+        description: "Något gick fel vid nedladdning av bilderna.",
+        variant: "destructive",
+      });
+    }
+
+    setIsDownloading(false);
+  };
+
+  const downloadAllImages = async () => {
+    selectAllImages();
+    // Wait for state to update, then download
+    setTimeout(() => {
+      downloadSelectedImages();
+    }, 100);
+  };
 
   const goToPrevious = useCallback(() => {
     if (selectedImageIndex === null) return;
@@ -191,8 +281,8 @@ export const PhotoGallerySection: React.FC = () => {
             </p>
           </div>
 
-          {/* Upload Button */}
-          <div className="text-center">
+          {/* Upload & Download Buttons */}
+          <div className="text-center space-y-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -201,27 +291,91 @@ export const PhotoGallerySection: React.FC = () => {
               className="hidden"
               onChange={handleFileSelect}
             />
-            <Button
-              variant="outline"
-              className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="mr-2 animate-spin" size={16} />
-                  Laddar upp...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2" size={16} />
-                  Ladda upp bilder
-                </>
-              )}
-            </Button>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              Bilderna visas direkt på sidan efter uppladdning
-            </p>
+            
+            {!isSelectMode ? (
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button
+                  variant="outline"
+                  className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 animate-spin" size={16} />
+                      Laddar upp...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2" size={16} />
+                      Ladda upp bilder
+                    </>
+                  )}
+                </Button>
+                
+                {allImages.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    onClick={() => setIsSelectMode(true)}
+                  >
+                    <Download className="mr-2" size={16} />
+                    Ladda ner bilder
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="outline"
+                    className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    onClick={selectAllImages}
+                  >
+                    <CheckSquare className="mr-2" size={16} />
+                    Välj alla ({allImages.length})
+                  </Button>
+                  
+                  <Button
+                    variant="default"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={downloadSelectedImages}
+                    disabled={selectedForDownload.size === 0 || isDownloading}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="mr-2 animate-spin" size={16} />
+                        Laddar ner...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2" size={16} />
+                        Ladda ner ({selectedForDownload.size})
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={exitSelectMode}
+                  >
+                    <X className="mr-2" size={16} />
+                    Avbryt
+                  </Button>
+                </div>
+                
+                <p className="text-[10px] text-primary font-medium">
+                  Klicka på bilderna du vill ladda ner • {selectedForDownload.size} av {allImages.length} valda
+                </p>
+              </div>
+            )}
+            
+            {!isSelectMode && (
+              <p className="text-[10px] text-muted-foreground">
+                Bilderna visas direkt på sidan efter uppladdning
+              </p>
+            )}
           </div>
 
           {/* Photo Grid - Fixed size container */}
@@ -238,38 +392,65 @@ export const PhotoGallerySection: React.FC = () => {
                   gridTemplateRows: `repeat(${gridColumns}, 1fr)`
                 }}
               >
-                {currentImages.map((image, index) => (
-                  <div 
-                    key={image.id || index}
-                    className="relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-transform duration-300 group"
-                    onClick={() => openLightbox(index)}
-                  >
-                    <img
-                      src={image.src}
-                      alt={image.alt}
-                      className="w-full h-full object-cover"
-                    />
-                    {image.isNew && (
-                      <div className="absolute top-0.5 right-0.5 bg-primary/80 text-primary-foreground text-[6px] px-1 py-0.5 rounded-full">
-                        Nytt
-                      </div>
-                    )}
-                    {image.canDelete && (
-                      <button
-                        className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (image.id && image.filePath) {
-                            handleDeletePhoto(image.id, image.filePath);
-                          }
-                        }}
-                        disabled={isDeleting}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {currentImages.map((image, index) => {
+                  const globalIndex = currentPage * IMAGES_PER_PAGE + index;
+                  const isSelected = selectedForDownload.has(globalIndex);
+                  
+                  return (
+                    <div 
+                      key={image.id || index}
+                      className={`relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-all duration-300 group ${
+                        isSelectMode && isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
+                      }`}
+                      onClick={() => {
+                        if (isSelectMode) {
+                          toggleImageSelection(globalIndex);
+                        } else {
+                          openLightbox(index);
+                        }
+                      }}
+                    >
+                      <img
+                        src={image.src}
+                        alt={image.alt}
+                        className={`w-full h-full object-cover transition-opacity ${
+                          isSelectMode && isSelected ? 'opacity-80' : ''
+                        }`}
+                      />
+                      
+                      {/* Selection indicator */}
+                      {isSelectMode && (
+                        <div className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-white/80 border-2 border-primary/50'
+                        }`}>
+                          {isSelected && <Check size={12} />}
+                        </div>
+                      )}
+                      
+                      {image.isNew && !isSelectMode && (
+                        <div className="absolute top-0.5 right-0.5 bg-primary/80 text-primary-foreground text-[6px] px-1 py-0.5 rounded-full">
+                          Nytt
+                        </div>
+                      )}
+                      {image.canDelete && !isSelectMode && (
+                        <button
+                          className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (image.id && image.filePath) {
+                              handleDeletePhoto(image.id, image.filePath);
+                            }
+                          }}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
