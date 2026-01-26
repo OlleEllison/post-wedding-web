@@ -1,0 +1,14 @@
+/* iOS Safari specific fixes for background pattern */
+@supports (-webkit-touch-callout: none) {
+  body::before {
+    display: none !important;
+  }
+  
+  body::after {
+    background-image: url('/background-pattern-green.png?v=2');
+    background-size: cover;
+    background-position: center center;
+    opacity: 0.15;
+    filter: none;
+  }
+}
