@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import JSZip from 'jszip';
+
+const ZIP_THRESHOLD = 5; // Download as ZIP if more than this many images
 
 const IMAGES_PER_PAGE = 100;
 const MAX_COLUMNS = 10;
@@ -77,6 +80,75 @@ export const PhotoGallerySection: React.FC = () => {
     setSelectedForDownload(new Set());
   };
 
+  const downloadAsZip = async (indices: Set<number>) => {
+    const zip = new JSZip();
+    const folder = zip.folder('brollopsbilder');
+    
+    if (!folder) {
+      throw new Error('Could not create ZIP folder');
+    }
+
+    let count = 0;
+    for (const index of indices) {
+      const image = allImages[index];
+      if (!image) continue;
+
+      try {
+        const response = await fetch(image.src);
+        const blob = await response.blob();
+        
+        // Get file extension from blob type or default to jpg
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const fileName = image.alt || `brollop-bild-${count + 1}.${ext}`;
+        
+        folder.file(fileName, blob);
+        count++;
+      } catch (error) {
+        console.error(`Failed to fetch image ${index}:`, error);
+      }
+    }
+
+    // Generate ZIP file
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    
+    // Download the ZIP
+    const url = window.URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'brollopsbilder.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    return count;
+  };
+
+  const downloadIndividually = async (indices: Set<number>) => {
+    let count = 0;
+    for (const index of indices) {
+      const image = allImages[index];
+      if (!image) continue;
+
+      const response = await fetch(image.src);
+      const blob = await response.blob();
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = image.alt || `wedding-photo-${index + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Small delay between downloads to prevent browser issues
+      await new Promise(resolve => setTimeout(resolve, 300));
+      count++;
+    }
+    return count;
+  };
+
   const downloadSelectedImages = async () => {
     if (selectedForDownload.size === 0) {
       toast({
@@ -90,35 +162,60 @@ export const PhotoGallerySection: React.FC = () => {
     setIsDownloading(true);
 
     try {
-      for (const index of selectedForDownload) {
-        const image = allImages[index];
-        if (!image) continue;
-
-        // Fetch the image
-        const response = await fetch(image.src);
-        const blob = await response.blob();
-        
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = image.alt || `wedding-photo-${index + 1}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        // Small delay between downloads to prevent browser issues
-        await new Promise(resolve => setTimeout(resolve, 300));
+      let count: number;
+      const useZip = selectedForDownload.size > ZIP_THRESHOLD;
+      
+      if (useZip) {
+        count = await downloadAsZip(selectedForDownload);
+        toast({
+          title: "ZIP-fil skapad! 📥",
+          description: `${count} bilder har packats i en ZIP-fil.`,
+        });
+      } else {
+        count = await downloadIndividually(selectedForDownload);
+        toast({
+          title: "Nedladdning klar! 📥",
+          description: `${count} bild${count > 1 ? 'er' : ''} har laddats ner.`,
+        });
       }
 
+      exitSelectMode();
+    } catch (error) {
+      console.error('Download error:', error);
       toast({
-        title: "Nedladdning klar! 📥",
-        description: `${selectedForDownload.size} bild${selectedForDownload.size > 1 ? 'er' : ''} har laddats ner.`,
+        title: "Nedladdning misslyckades",
+        description: "Något gick fel vid nedladdning av bilderna.",
+        variant: "destructive",
+      });
+    }
+
+    setIsDownloading(false);
+  };
+
+  const downloadAllAsZip = async () => {
+    if (allImages.length === 0) {
+      toast({
+        title: "Inga bilder",
+        description: "Det finns inga bilder att ladda ner.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      const allIndices = new Set(allImages.map((_, index) => index));
+      const count = await downloadAsZip(allIndices);
+      
+      toast({
+        title: "ZIP-fil skapad! 📥",
+        description: `Alla ${count} bilder har packats i en ZIP-fil.`,
       });
 
       exitSelectMode();
     } catch (error) {
+      console.error('Download error:', error);
       toast({
         title: "Nedladdning misslyckades",
         description: "Något gick fel vid nedladdning av bilderna.",
@@ -339,18 +436,18 @@ export const PhotoGallerySection: React.FC = () => {
                   <Button
                     variant="default"
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
-                    onClick={downloadSelectedImages}
-                    disabled={selectedForDownload.size === 0 || isDownloading}
+                    onClick={downloadAllAsZip}
+                    disabled={isDownloading}
                   >
                     {isDownloading ? (
                       <>
                         <Loader2 className="mr-2 animate-spin" size={16} />
-                        Laddar ner...
+                        Skapar ZIP...
                       </>
                     ) : (
                       <>
                         <Download className="mr-2" size={16} />
-                        Ladda ner ({selectedForDownload.size})
+                        Ladda ner alla (ZIP)
                       </>
                     )}
                   </Button>
@@ -365,8 +462,22 @@ export const PhotoGallerySection: React.FC = () => {
                   </Button>
                 </div>
                 
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="default"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={downloadSelectedImages}
+                    disabled={selectedForDownload.size === 0 || isDownloading}
+                  >
+                    <Download className="mr-2" size={16} />
+                    Ladda ner valda ({selectedForDownload.size})
+                    {selectedForDownload.size > ZIP_THRESHOLD && ' (ZIP)'}
+                  </Button>
+                </div>
+                
                 <p className="text-[10px] text-primary font-medium">
                   Klicka på bilderna du vill ladda ner • {selectedForDownload.size} av {allImages.length} valda
+                  {selectedForDownload.size > ZIP_THRESHOLD && ' • Laddas ner som ZIP'}
                 </p>
               </div>
             )}
