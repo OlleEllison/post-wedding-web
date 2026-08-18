@@ -67,12 +67,15 @@ export function useWeddingPhotos() {
         return {
           id: photo.id,
           src: urlData.publicUrl,
+          thumbSrc: resized(urlData.publicUrl, 400, 55),
+          previewSrc: resized(urlData.publicUrl, 1280, 70),
           alt: photo.file_name,
           filePath: photo.file_path,
           isUploaded: true,
           isNew: isWithin24Hours(photo.created_at),
           canDelete: photo.canDelete,
         };
+
       });
       setUploadedPhotos(photos);
     }
