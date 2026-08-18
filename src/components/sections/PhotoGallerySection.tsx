@@ -11,8 +11,40 @@ import JSZip from 'jszip';
 const ZIP_THRESHOLD = 5; // Download as ZIP if more than this many images
 const MAX_ZIP_IMAGES = 300; // Larger ZIPs can crash the browser tab
 
-const IMAGES_PER_PAGE = 100;
+const IMAGES_PER_PAGE = 49;
 const MAX_COLUMNS = 10;
+
+// Downscale huge phone/camera photos in the browser before uploading, so the
+// gallery serves reasonable files instead of 5-10 MB originals.
+const MAX_UPLOAD_DIMENSION = 2400;
+
+const compressImage = async (file: File): Promise<File> => {
+  try {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 1_500_000) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.82)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+      type: 'image/jpeg',
+    });
+  } catch {
+    return file;
+  }
+};
+
 
 export const PhotoGallerySection: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -357,26 +389,28 @@ export const PhotoGallerySection: React.FC = () => {
 
     setIsUploading(true);
 
-    for (const file of Array.from(files)) {
+    for (const original of Array.from(files)) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
+      if (!original.type.startsWith('image/')) {
         toast({
           title: "Ogiltig filtyp",
-          description: `${file.name} är inte en bild.`,
+          description: `${original.name} är inte en bild.`,
           variant: "destructive",
         });
         continue;
       }
 
       // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
+      if (original.size > 10 * 1024 * 1024) {
         toast({
           title: "Filen är för stor",
-          description: `${file.name} är större än 10MB.`,
+          description: `${original.name} är större än 10MB.`,
           variant: "destructive",
         });
         continue;
       }
+
+      const file = await compressImage(original);
 
       const fileExt = (file.name.split('.').pop() ?? 'jpg')
         .replace(/[^A-Za-z0-9]/g, '')
@@ -403,6 +437,7 @@ export const PhotoGallerySection: React.FC = () => {
       const { error: uploadError } = await supabase.storage
         .from('wedding-photos')
         .uploadToSignedUrl(filePath, signed.token, file);
+
 
       if (uploadError) {
         toast({
@@ -653,10 +688,11 @@ export const PhotoGallerySection: React.FC = () => {
                       }}
                     >
                       <img
-                        src={image.src}
+                        src={image.thumbSrc || image.src}
                         alt={image.alt}
                         loading="lazy"
                         decoding="async"
+
                         className={`w-full h-full object-cover transition-opacity ${
                           isSelectMode && isSelected ? 'opacity-80' : ''
                         }`}
@@ -763,10 +799,11 @@ export const PhotoGallerySection: React.FC = () => {
                 </button>
                 
                 <img
-                  src={allImages[selectedImageIndex].src}
+                  src={allImages[selectedImageIndex].previewSrc || allImages[selectedImageIndex].src}
                   alt={allImages[selectedImageIndex].alt}
                   className="max-w-[85vw] max-h-[75vh] object-contain rounded-lg"
                 />
+
                 
                 <div className="flex items-center gap-4">
                   <span className="text-white text-sm">

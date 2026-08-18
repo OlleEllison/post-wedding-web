@@ -68,18 +68,25 @@ export const HeroSection: React.FC = () => {
             {/* Rotating Gallery */}
             <div className="relative w-64 md:w-80 h-80 md:h-96 rounded-lg shadow-xl overflow-hidden">
               {allImages.length > 0 ? (
-                allImages.map((image, index) => (
-                  <img
-                    key={index}
-                    src={image.src}
-                    alt={image.alt}
-                    loading={index === 0 ? 'eager' : 'lazy'}
-                    decoding="async"
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                      index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                ))
+                allImages.map((image, index) => {
+                  const nextIndex = (currentImageIndex + 1) % allImages.length;
+                  // Only keep the visible image and the next one in the DOM so
+                  // the hero never downloads the whole rotation up front.
+                  if (index !== currentImageIndex && index !== nextIndex) return null;
+                  return (
+                    <img
+                      key={index}
+                      src={image.previewSrc || image.src}
+                      alt={image.alt}
+                      loading={index === currentImageIndex ? 'eager' : 'lazy'}
+                      decoding="async"
+                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                        index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    />
+                  );
+                })
+
               ) : (
                 <div className="w-full h-full bg-primary/10 flex items-center justify-center">
                   <p className="text-muted-foreground text-sm">Laddar bilder...</p>
