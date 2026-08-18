@@ -389,26 +389,28 @@ export const PhotoGallerySection: React.FC = () => {
 
     setIsUploading(true);
 
-    for (const file of Array.from(files)) {
+    for (const original of Array.from(files)) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
+      if (!original.type.startsWith('image/')) {
         toast({
           title: "Ogiltig filtyp",
-          description: `${file.name} är inte en bild.`,
+          description: `${original.name} är inte en bild.`,
           variant: "destructive",
         });
         continue;
       }
 
       // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
+      if (original.size > 10 * 1024 * 1024) {
         toast({
           title: "Filen är för stor",
-          description: `${file.name} är större än 10MB.`,
+          description: `${original.name} är större än 10MB.`,
           variant: "destructive",
         });
         continue;
       }
+
+      const file = await compressImage(original);
 
       const fileExt = (file.name.split('.').pop() ?? 'jpg')
         .replace(/[^A-Za-z0-9]/g, '')
@@ -435,6 +437,7 @@ export const PhotoGallerySection: React.FC = () => {
       const { error: uploadError } = await supabase.storage
         .from('wedding-photos')
         .uploadToSignedUrl(filePath, signed.token, file);
+
 
       if (uploadError) {
         toast({
