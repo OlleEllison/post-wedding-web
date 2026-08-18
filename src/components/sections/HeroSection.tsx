@@ -10,10 +10,18 @@ export const HeroSection: React.FC = () => {
   // Keep only a small rotating set in the DOM so the hero stays fast
   // even when thousands of photos have been uploaded.
   const MAX_HERO_IMAGES = 20;
-  const allImages = useMemo(
-    () => sourceImages.slice(0, MAX_HERO_IMAGES),
-    [sourceImages]
-  );
+  // Rotate through a random sample of the published gallery (uploaded photos
+  // first, then the static ones), keeping the DOM small.
+  const allImages = useMemo(() => {
+    if (sourceImages.length <= MAX_HERO_IMAGES) return sourceImages;
+    const pool = [...sourceImages];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, MAX_HERO_IMAGES);
+  }, [sourceImages]);
+
 
   // Reset index if it exceeds the current array length (e.g., after image deletion)
   useEffect(() => {
