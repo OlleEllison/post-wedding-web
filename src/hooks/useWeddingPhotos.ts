@@ -32,7 +32,9 @@ export interface GalleryImage {
 // multi-megabyte originals just to render a thumbnail.
 const resized = (publicUrl: string, width: number, quality: number) =>
   publicUrl.replace('/object/public/', '/render/image/public/') +
-  `?width=${width}&quality=${quality}`;
+  // resize=contain keeps the original aspect ratio (no cropping/zooming);
+  // only the longest side is bounded by `width`.
+  `?width=${width}&height=${width}&resize=contain&quality=${quality}`;
 
 
 // The guest id comes from the server-signed session token issued at login.
