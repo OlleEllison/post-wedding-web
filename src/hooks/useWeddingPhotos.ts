@@ -69,8 +69,8 @@ export function useWeddingPhotos() {
         return {
           id: photo.id,
           src: urlData.publicUrl,
-          thumbSrc: resized(urlData.publicUrl, 400, 55),
-          previewSrc: resized(urlData.publicUrl, 1280, 70),
+          thumbSrc: resized(urlData.publicUrl, 600, 65),
+          previewSrc: resized(urlData.publicUrl, 1600, 78),
           alt: photo.file_name,
           filePath: photo.file_path,
           isUploaded: true,
