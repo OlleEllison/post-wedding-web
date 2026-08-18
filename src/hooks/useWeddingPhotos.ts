@@ -120,7 +120,7 @@ export function useWeddingPhotos() {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('wedding_photos')
+      .channel(`wedding_photos_${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
