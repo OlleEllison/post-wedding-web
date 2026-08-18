@@ -724,20 +724,6 @@ export const PhotoGallerySection: React.FC = () => {
                           Nytt
                         </div>
                       )}
-                      {image.canDelete && !isSelectMode && !isDeleteMode && (
-                        <button
-                          className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (image.id && image.filePath) {
-                              handleDeletePhoto(image.id, image.filePath);
-                            }
-                          }}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
                     </div>
                   );
                 })}
