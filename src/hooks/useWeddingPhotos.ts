@@ -36,7 +36,7 @@ interface WeddingPhoto {
   file_path: string;
   file_name: string;
   created_at: string;
-  uploaded_by: string | null;
+  canDelete: boolean;
 }
 
 export interface GalleryImage {
