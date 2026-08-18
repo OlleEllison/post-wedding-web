@@ -32,7 +32,9 @@ export interface GalleryImage {
 // multi-megabyte originals just to render a thumbnail.
 const resized = (publicUrl: string, width: number, quality: number) =>
   publicUrl.replace('/object/public/', '/render/image/public/') +
-  `?width=${width}&quality=${quality}`;
+  // resize=contain keeps the original aspect ratio (no cropping/zooming);
+  // only the longest side is bounded by `width`.
+  `?width=${width}&height=${width}&resize=contain&quality=${quality}`;
 
 
 // The guest id comes from the server-signed session token issued at login.
@@ -67,8 +69,8 @@ export function useWeddingPhotos() {
         return {
           id: photo.id,
           src: urlData.publicUrl,
-          thumbSrc: resized(urlData.publicUrl, 400, 55),
-          previewSrc: resized(urlData.publicUrl, 1280, 70),
+          thumbSrc: resized(urlData.publicUrl, 600, 65),
+          previewSrc: resized(urlData.publicUrl, 1600, 78),
           alt: photo.file_name,
           filePath: photo.file_path,
           isUploaded: true,
