@@ -139,7 +139,7 @@ export const MemoriesSection: React.FC = () => {
               Dela ditt bästa minne
             </h3>
             <p className="text-[10px] md:text-[12px] text-muted-foreground">
-              Vad var ditt favorit-ögonblick från bröllopet? Dela med dig av ditt bästa minne!
+              Vad var ditt favoritögonblick från bröllopet? Dela med dig av ditt bästa minne!
             </p>
           </div>
 

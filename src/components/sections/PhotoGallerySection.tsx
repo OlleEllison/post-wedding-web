@@ -21,6 +21,8 @@ export const PhotoGallerySection: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedForDownload, setSelectedForDownload] = useState<Set<number>>(new Set());
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { allImages, isLoading, deletePhoto } = useWeddingPhotos();
@@ -48,7 +50,7 @@ export const PhotoGallerySection: React.FC = () => {
   }, [currentImages.length]);
 
   const openLightbox = (index: number) => {
-    if (isSelectMode) return; // Don't open lightbox in select mode
+    if (isSelectMode || isDeleteMode) return; // Don't open lightbox in select mode
     const globalIndex = currentPage * IMAGES_PER_PAGE + index;
     setSelectedImageIndex(globalIndex);
   };
@@ -76,6 +78,57 @@ export const PhotoGallerySection: React.FC = () => {
 
   const clearSelection = () => {
     setSelectedForDownload(new Set());
+  };
+
+  const deletableCount = useMemo(
+    () => allImages.filter((img) => img.canDelete).length,
+    [allImages]
+  );
+
+  const toggleImageForDelete = (globalIndex: number) => {
+    setSelectedForDelete((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(globalIndex)) newSet.delete(globalIndex);
+      else newSet.add(globalIndex);
+      return newSet;
+    });
+  };
+
+  const exitDeleteMode = () => {
+    setIsDeleteMode(false);
+    setSelectedForDelete(new Set());
+  };
+
+  const deleteSelectedImages = async () => {
+    if (selectedForDelete.size === 0) return;
+    setIsDeleting(true);
+    const targets = Array.from(selectedForDelete)
+      .map((i) => allImages[i])
+      .filter((img) => img && img.canDelete && img.id && img.filePath);
+
+    let removed = 0;
+    let failed = 0;
+    for (const img of targets) {
+      const { error } = await deletePhoto(img!.id as string, img!.filePath as string);
+      if (error) failed++;
+      else removed++;
+    }
+    setIsDeleting(false);
+    exitDeleteMode();
+
+    if (removed > 0) {
+      toast({
+        title: "Borttagna",
+        description: `${removed} bild${removed > 1 ? 'er' : ''} har tagits bort.`,
+      });
+    }
+    if (failed > 0) {
+      toast({
+        title: "Kunde inte ta bort",
+        description: `${failed} bild${failed > 1 ? 'er' : ''} kunde inte tas bort.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const exitSelectMode = () => {
@@ -400,7 +453,41 @@ export const PhotoGallerySection: React.FC = () => {
               onChange={handleFileSelect}
             />
             
-            {!isSelectMode ? (
+            {isDeleteMode ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="destructive"
+                    onClick={deleteSelectedImages}
+                    disabled={selectedForDelete.size === 0 || isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="mr-2 animate-spin" size={16} />
+                        Tar bort...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2" size={16} />
+                        Ta bort valda ({selectedForDelete.size})
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={exitDeleteMode}
+                    disabled={isDeleting}
+                  >
+                    <X className="mr-2" size={16} />
+                    Avbryt
+                  </Button>
+                </div>
+                <p className="text-[10px] text-destructive font-medium">
+                  Klicka på bilderna du vill ta bort • du kan bara ta bort dina egna bilder
+                </p>
+              </div>
+            ) : !isSelectMode ? (
               <div className="flex flex-wrap justify-center gap-3">
                 <Button
                   variant="outline"
@@ -429,6 +516,17 @@ export const PhotoGallerySection: React.FC = () => {
                   >
                     <Download className="mr-2" size={16} />
                     Ladda ner bilder
+                  </Button>
+                )}
+
+                {deletableCount > 0 && (
+                  <Button
+                    variant="outline"
+                    className="border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setIsDeleteMode(true)}
+                  >
+                    <Trash2 className="mr-2" size={16} />
+                    Ta bort bilder
                   </Button>
                 )}
               </div>
@@ -493,7 +591,7 @@ export const PhotoGallerySection: React.FC = () => {
               </div>
             )}
             
-            {!isSelectMode && (
+            {!isSelectMode && !isDeleteMode && (
               <p className="text-[10px] text-muted-foreground">
                 Bilderna visas direkt på sidan efter uppladdning
               </p>
@@ -517,15 +615,20 @@ export const PhotoGallerySection: React.FC = () => {
                 {currentImages.map((image, index) => {
                   const globalIndex = currentPage * IMAGES_PER_PAGE + index;
                   const isSelected = selectedForDownload.has(globalIndex);
+                  const isMarkedForDelete = selectedForDelete.has(globalIndex);
                   
                   return (
                     <div 
                       key={image.id || index}
                       className={`relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-all duration-300 group ${
                         isSelectMode && isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
+                      } ${isDeleteMode && isMarkedForDelete ? 'ring-2 ring-destructive ring-offset-1' : ''} ${
+                        isDeleteMode && !image.canDelete ? 'opacity-40 cursor-not-allowed' : ''
                       }`}
                       onClick={() => {
-                        if (isSelectMode) {
+                        if (isDeleteMode) {
+                          if (image.canDelete) toggleImageForDelete(globalIndex);
+                        } else if (isSelectMode) {
                           toggleImageSelection(globalIndex);
                         } else {
                           openLightbox(index);
@@ -553,12 +656,22 @@ export const PhotoGallerySection: React.FC = () => {
                         </div>
                       )}
                       
-                      {image.isNew && !isSelectMode && (
+                      {isDeleteMode && image.canDelete && (
+                        <div className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                          isMarkedForDelete
+                            ? 'bg-destructive text-destructive-foreground'
+                            : 'bg-white/80 border-2 border-destructive/50'
+                        }`}>
+                          {isMarkedForDelete && <Check size={12} />}
+                        </div>
+                      )}
+
+                      {image.isNew && !isSelectMode && !isDeleteMode && (
                         <div className="absolute top-0.5 right-0.5 bg-primary/80 text-primary-foreground text-[6px] px-1 py-0.5 rounded-full">
                           Nytt
                         </div>
                       )}
-                      {image.canDelete && !isSelectMode && (
+                      {image.canDelete && !isSelectMode && !isDeleteMode && (
                         <button
                           className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
