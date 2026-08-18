@@ -1,1 +1,10 @@
 project_id = "ljjdapaiocsydrgjxevv"
+
+[functions.verify-password]
+verify_jwt = false
+
+[functions.guest-content]
+verify_jwt = false
+
+[functions.submit-rsvp]
+verify_jwt = false
