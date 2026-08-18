@@ -190,7 +190,7 @@ export const PhotoGallerySection: React.FC = () => {
       console.error('Download error:', error);
       toast({
         title: "Nedladdning misslyckades",
-        description: "Något gick fel vid nedladdning av bilderna.",
+        description: error instanceof Error ? error.message : "Något gick fel vid nedladdning av bilderna.",
         variant: "destructive",
       });
     }
@@ -224,7 +224,7 @@ export const PhotoGallerySection: React.FC = () => {
       console.error('Download error:', error);
       toast({
         title: "Nedladdning misslyckades",
-        description: "Något gick fel vid nedladdning av bilderna.",
+        description: error instanceof Error ? error.message : "Något gick fel vid nedladdning av bilderna.",
         variant: "destructive",
       });
     }
