@@ -66,36 +66,18 @@ export function useWeddingPhotos() {
   const currentUserId = getGuestId();
 
   const fetchPhotos = async () => {
-    // PostgREST caps a single request at 1000 rows, so page through the table
-    const PAGE_SIZE = 1000;
-    const rows: WeddingPhoto[] = [];
-    let from = 0;
-    let error: unknown = null;
+    // Photo records are only readable through the guest-content edge function,
+    // which verifies the signed session token and derives ownership server-side.
+    const { data } = await callGuestApi<{ photos: WeddingPhoto[] }>(
+      'list_photos',
+    );
 
-    // Safety cap: 20 000 photos
-    while (from < 20000) {
-      const { data, error: pageError } = await supabase
-        .from('wedding_photos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
-
-      if (pageError) {
-        error = pageError;
-        break;
-      }
-      if (!data || data.length === 0) break;
-      rows.push(...(data as WeddingPhoto[]));
-      if (data.length < PAGE_SIZE) break;
-      from += PAGE_SIZE;
-    }
-
-    if (!error) {
-      const photos = rows.map((photo: WeddingPhoto) => {
+    if (data?.photos) {
+      const photos = data.photos.map((photo) => {
         const { data: urlData } = supabase.storage
           .from('wedding-photos')
           .getPublicUrl(photo.file_path);
-        
+
         return {
           id: photo.id,
           src: urlData.publicUrl,
@@ -103,7 +85,7 @@ export function useWeddingPhotos() {
           filePath: photo.file_path,
           isUploaded: true,
           isNew: isWithin24Hours(photo.created_at),
-          canDelete: !!currentUserId && photo.uploaded_by === currentUserId,
+          canDelete: photo.canDelete,
         };
       });
       setUploadedPhotos(photos);
@@ -125,45 +107,11 @@ export function useWeddingPhotos() {
 
   useEffect(() => {
     fetchPhotos();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel(`wedding_photos_${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'wedding_photos',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const photo = payload.new as WeddingPhoto;
-            const { data: urlData } = supabase.storage
-              .from('wedding-photos')
-              .getPublicUrl(photo.file_path);
-            
-            setUploadedPhotos((prev) => [{
-              id: photo.id,
-              src: urlData.publicUrl,
-              alt: photo.file_name,
-              filePath: photo.file_path,
-              isUploaded: true,
-              isNew: true,
-              canDelete: !!currentUserId && photo.uploaded_by === currentUserId,
-            }, ...prev]);
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as WeddingPhoto).id;
-            setUploadedPhotos((prev) => prev.filter((p) => p.id !== deletedId));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Realtime needs public table reads, so poll instead.
+    const interval = setInterval(fetchPhotos, 30000);
+    return () => clearInterval(interval);
   }, [currentUserId]);
+
 
   // Combine uploaded photos with static images
   const allImages: GalleryImage[] = [...uploadedPhotos, ...staticImages];
