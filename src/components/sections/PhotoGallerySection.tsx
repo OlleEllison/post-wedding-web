@@ -440,7 +440,7 @@ export const PhotoGallerySection: React.FC = () => {
               Bilder från dagen
             </h2>
             <p className="text-[10px] md:text-[12px] text-muted-foreground max-w-md mx-auto">
-              Har du bilder från bröllopet? Ladda upp dem här så samlar vi alla minnen på ett ställe!
+              Har du bilder från bröllopet? Ladda upp dem här så samlar vi alla minnen på ett ställe! Och vill du ta bort någon bild du inte vill att andra ska se kan du göra det också
             </p>
           </div>
 
