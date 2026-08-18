@@ -80,10 +80,12 @@ export const PhotoGallerySection: React.FC = () => {
     setSelectedForDownload(new Set());
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const deletableCount = useMemo(
     () => allImages.filter((img) => img.canDelete).length,
     [allImages]
   );
+
 
   const toggleImageForDelete = (globalIndex: number) => {
     setSelectedForDelete((prev) => {
@@ -519,16 +521,15 @@ export const PhotoGallerySection: React.FC = () => {
                   </Button>
                 )}
 
-                {deletableCount > 0 && (
-                  <Button
-                    variant="outline"
-                    className="border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setIsDeleteMode(true)}
-                  >
-                    <Trash2 className="mr-2" size={16} />
-                    Ta bort bilder
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  className="border-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => setIsDeleteMode(true)}
+                >
+                  <Trash2 className="mr-2" size={16} />
+                  Ta bort bilder
+                </Button>
+
               </div>
             ) : (
               <div className="space-y-3">
