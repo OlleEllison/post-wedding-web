@@ -113,6 +113,66 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case "list_photos": {
+        const rows: Array<
+          {
+            id: string;
+            file_path: string;
+            file_name: string;
+            created_at: string;
+            uploaded_by: string | null;
+          }
+        > = [];
+        const PAGE = 1000;
+        for (let from = 0; from < 20000; from += PAGE) {
+          const { data, error } = await supabase
+            .from("wedding_photos")
+            .select("id, file_path, file_name, created_at, uploaded_by")
+            .order("created_at", { ascending: false })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          rows.push(...data);
+          if (data.length < PAGE) break;
+        }
+        const photos = rows.map((p) => ({
+          id: p.id,
+          file_path: p.file_path,
+          file_name: p.file_name,
+          created_at: p.created_at,
+          canDelete: p.uploaded_by === guestId,
+        }));
+        return json({ photos });
+      }
+
+      case "create_upload_url": {
+        const ext = typeof body?.ext === "string"
+          ? body.ext.replace(/[^A-Za-z0-9]/g, "").slice(0, 10)
+          : "";
+        if (!ext) return json({ error: "Ogiltig filtyp" }, 400);
+
+        const allowed = await checkRateLimit(
+          supabase,
+          "upload",
+          ip,
+          UPLOAD_LIMIT_PER_WINDOW,
+          UPLOAD_WINDOW_MS,
+        );
+        if (!allowed) {
+          return json(
+            { error: "För många uppladdningar. Vänta en stund." },
+            429,
+          );
+        }
+
+        const filePath = `${crypto.randomUUID()}.${ext}`;
+        const { data, error } = await supabase.storage
+          .from("wedding-photos")
+          .createSignedUploadUrl(filePath);
+        if (error) throw error;
+        return json({ filePath, token: data.token, path: data.path });
+      }
+
       case "register_photo": {
         const filePath = typeof body?.filePath === "string"
           ? body.filePath

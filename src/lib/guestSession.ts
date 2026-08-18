@@ -26,6 +26,8 @@ type GuestAction =
   | 'list_memories'
   | 'post_memory'
   | 'delete_memory'
+  | 'list_photos'
+  | 'create_upload_url'
   | 'register_photo'
   | 'delete_photo';
 
