@@ -653,10 +653,11 @@ export const PhotoGallerySection: React.FC = () => {
                       }}
                     >
                       <img
-                        src={image.src}
+                        src={image.thumbSrc || image.src}
                         alt={image.alt}
                         loading="lazy"
                         decoding="async"
+
                         className={`w-full h-full object-cover transition-opacity ${
                           isSelectMode && isSelected ? 'opacity-80' : ''
                         }`}
