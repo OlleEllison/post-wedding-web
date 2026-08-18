@@ -80,10 +80,12 @@ export const PhotoGallerySection: React.FC = () => {
     setSelectedForDownload(new Set());
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const deletableCount = useMemo(
     () => allImages.filter((img) => img.canDelete).length,
     [allImages]
   );
+
 
   const toggleImageForDelete = (globalIndex: number) => {
     setSelectedForDelete((prev) => {
