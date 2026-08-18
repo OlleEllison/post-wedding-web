@@ -1,7 +1,9 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2, Download, Check, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
+import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
+import { callGuestApi } from '@/lib/guestSession';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
