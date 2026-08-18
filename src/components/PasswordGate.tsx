@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Lock, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getGuestId, getSessionToken, setSessionToken } from '@/lib/guestSession';
 
 interface PasswordGateProps {
   children: React.ReactNode;
@@ -20,7 +21,7 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ children }) => {
   useEffect(() => {
     // Check if already unlocked
     const accessGranted = localStorage.getItem(STORAGE_KEY);
-    if (accessGranted === 'true') {
+    if (accessGranted === 'true' && getSessionToken()) {
       setIsUnlocked(true);
     } else {
       setIsUnlocked(false);
@@ -34,7 +35,7 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ children }) => {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('verify-password', {
-        body: { password }
+        body: { password, guestId: getGuestId() ?? undefined }
       });
 
       if (fnError) {
@@ -44,12 +45,13 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ children }) => {
         return;
       }
 
-      if (data?.success) {
+      if (data?.success && data?.token) {
+        setSessionToken(data.token);
         localStorage.setItem(STORAGE_KEY, 'true');
         setIsUnlocked(true);
         toast.success('Welcome to our wedding celebration!');
       } else {
-        setError('Incorrect password. Please try again.');
+        setError(data?.error ?? 'Incorrect password. Please try again.');
         setPassword('');
       }
     } catch (err) {
