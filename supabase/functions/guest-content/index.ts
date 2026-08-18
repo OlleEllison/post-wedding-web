@@ -13,7 +13,7 @@ import {
 
 const MEMORY_LIMIT_PER_WINDOW = 5;
 const MEMORY_WINDOW_MS = 10 * 60 * 1000;
-const UPLOAD_LIMIT_PER_WINDOW = 60;
+const UPLOAD_LIMIT_PER_WINDOW = 2000;
 const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
