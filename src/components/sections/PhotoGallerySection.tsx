@@ -381,13 +381,28 @@ export const PhotoGallerySection: React.FC = () => {
       const fileExt = (file.name.split('.').pop() ?? 'jpg')
         .replace(/[^A-Za-z0-9]/g, '')
         .slice(0, 10) || 'jpg';
-      // UUID filenames make collisions/overwrites between guests impossible
-      const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
-      // Upload to storage
+      // The server issues a one-time signed upload URL (UUID filename),
+      // so the storage bucket accepts no anonymous uploads.
+      const { data: signed, error: signError } = await callGuestApi<{
+        filePath: string;
+        token: string;
+      }>('create_upload_url', { ext: fileExt });
+
+      if (signError || !signed) {
+        toast({
+          title: "Uppladdning misslyckades",
+          description: signError ?? `Kunde inte ladda upp ${file.name}.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      const filePath = signed.filePath;
+
       const { error: uploadError } = await supabase.storage
         .from('wedding-photos')
-        .upload(filePath, file);
+        .uploadToSignedUrl(filePath, signed.token, file);
 
       if (uploadError) {
         toast({
@@ -397,6 +412,7 @@ export const PhotoGallerySection: React.FC = () => {
         });
         continue;
       }
+
 
       // Register the photo server-side; ownership is derived from the session token
       const { error: dbError } = await callGuestApi('register_photo', {
