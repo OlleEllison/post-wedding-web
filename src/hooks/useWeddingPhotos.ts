@@ -72,13 +72,32 @@ export function useWeddingPhotos() {
   const currentUserId = getUserId();
 
   const fetchPhotos = async () => {
-    const { data, error } = await supabase
-      .from('wedding_photos')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // PostgREST caps a single request at 1000 rows, so page through the table
+    const PAGE_SIZE = 1000;
+    const rows: WeddingPhoto[] = [];
+    let from = 0;
+    let error: unknown = null;
 
-    if (data && !error) {
-      const photos = data.map((photo: WeddingPhoto) => {
+    // Safety cap: 20 000 photos
+    while (from < 20000) {
+      const { data, error: pageError } = await supabase
+        .from('wedding_photos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (pageError) {
+        error = pageError;
+        break;
+      }
+      if (!data || data.length === 0) break;
+      rows.push(...(data as WeddingPhoto[]));
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    if (!error) {
+      const photos = rows.map((photo: WeddingPhoto) => {
         const { data: urlData } = supabase.storage
           .from('wedding-photos')
           .getPublicUrl(photo.file_path);
