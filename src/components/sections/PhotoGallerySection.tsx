@@ -1,7 +1,9 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Camera, X, ChevronLeft, ChevronRight, Upload, Loader2, Trash2, Download, Check, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useWeddingPhotos, getUserId } from '@/hooks/useWeddingPhotos';
+import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
+import { callGuestApi } from '@/lib/guestSession';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
@@ -321,9 +323,11 @@ export const PhotoGallerySection: React.FC = () => {
         continue;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = fileName;
+      const fileExt = (file.name.split('.').pop() ?? 'jpg')
+        .replace(/[^A-Za-z0-9]/g, '')
+        .slice(0, 10) || 'jpg';
+      // UUID filenames make collisions/overwrites between guests impossible
+      const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
@@ -339,11 +343,11 @@ export const PhotoGallerySection: React.FC = () => {
         continue;
       }
 
-      // Save to database with user ID
-      const userId = getUserId();
-      const { error: dbError } = await supabase
-        .from('wedding_photos')
-        .insert([{ file_path: filePath, file_name: file.name, uploaded_by: userId }]);
+      // Register the photo server-side; ownership is derived from the session token
+      const { error: dbError } = await callGuestApi('register_photo', {
+        filePath,
+        fileName: file.name,
+      });
 
       if (dbError) {
         toast({
@@ -353,6 +357,7 @@ export const PhotoGallerySection: React.FC = () => {
         });
       }
     }
+
 
     toast({
       title: "Tack! 📸",

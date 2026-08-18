@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      rate_limit_events: {
+        Row: {
+          created_at: string
+          id: string
+          identifier: string
+          kind: string
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identifier: string
+          kind: string
+          success?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identifier?: string
+          kind?: string
+          success?: boolean
+        }
+        Relationships: []
+      }
       wedding_memories: {
         Row: {
           created_at: string

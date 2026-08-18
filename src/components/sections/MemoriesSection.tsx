@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getUserId } from '@/hooks/useWeddingPhotos';
+import { callGuestApi } from '@/lib/guestSession';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 
@@ -16,7 +15,6 @@ interface Memory {
   name: string;
   message: string;
   created_at: string;
-  posted_by: string | null;
   canDelete?: boolean;
 }
 
@@ -29,7 +27,6 @@ export const MemoriesSection: React.FC = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
-  const currentUserId = getUserId();
 
   const handleEmojiSelect = (emoji: { native: string }) => {
     setMessage((prev) => prev + emoji.native);
@@ -37,53 +34,26 @@ export const MemoriesSection: React.FC = () => {
     textareaRef.current?.focus();
   };
 
-  // Fetch existing memories
+  // Memories are read through the secure edge function (the table is not
+  // publicly readable), and refreshed periodically to keep the feed live.
   useEffect(() => {
+    let cancelled = false;
+
     const fetchMemories = async () => {
-      const { data, error } = await supabase
-        .from('wedding_memories')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (data && !error) {
-        setMemories(data.map((m: Memory) => ({
-          ...m,
-          canDelete: m.posted_by === currentUserId,
-        })));
+      const { data } = await callGuestApi<{ memories: Memory[] }>('list_memories');
+      if (!cancelled && data?.memories) {
+        setMemories(data.memories);
       }
     };
 
     fetchMemories();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('wedding_memories')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'wedding_memories',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newMemory = payload.new as Memory;
-            setMemories((prev) => [{
-              ...newMemory,
-              canDelete: newMemory.posted_by === currentUserId,
-            }, ...prev]);
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as Memory).id;
-            setMemories((prev) => prev.filter((m) => m.id !== deletedId));
-          }
-        }
-      )
-      .subscribe();
+    const interval = window.setInterval(fetchMemories, 15000);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [currentUserId]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,15 +69,15 @@ export const MemoriesSection: React.FC = () => {
 
     setIsSubmitting(true);
 
-    const userId = getUserId();
-    const { error } = await supabase
-      .from('wedding_memories')
-      .insert([{ name: name.trim(), message: message.trim(), posted_by: userId }]);
+    const { data, error } = await callGuestApi<{ memory: Memory }>('post_memory', {
+      name: name.trim(),
+      message: message.trim(),
+    });
 
     if (error) {
       toast({
         title: "Något gick fel",
-        description: "Kunde inte skicka ditt meddelande. Försök igen.",
+        description: error,
         variant: "destructive",
       });
     } else {
@@ -115,6 +85,9 @@ export const MemoriesSection: React.FC = () => {
         title: "Tack! 💕",
         description: "Ditt minne har sparats.",
       });
+      if (data?.memory) {
+        setMemories((prev) => [data.memory, ...prev]);
+      }
       setName('');
       setMessage('');
     }
@@ -124,15 +97,12 @@ export const MemoriesSection: React.FC = () => {
 
   const deleteMemory = async (memoryId: string) => {
     setIsDeleting(true);
-    const { error } = await supabase
-      .from('wedding_memories')
-      .delete()
-      .eq('id', memoryId);
+    const { error } = await callGuestApi('delete_memory', { id: memoryId });
 
     if (error) {
       toast({
         title: "Kunde inte ta bort",
-        description: "Något gick fel vid borttagning.",
+        description: error,
         variant: "destructive",
       });
     } else {

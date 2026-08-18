@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { callGuestApi, getGuestId } from '@/lib/guestSession';
 
 // Static gallery images (fallback)
 import gallery1 from '@/assets/gallery/gallery-1.jpeg';
@@ -48,16 +49,9 @@ export interface GalleryImage {
   canDelete?: boolean;
 }
 
-// Get or create a unique user ID for this browser
-export const getUserId = (): string => {
-  const storageKey = 'wedding-user-id';
-  let userId = localStorage.getItem(storageKey);
-  if (!userId) {
-    userId = crypto.randomUUID();
-    localStorage.setItem(storageKey, userId);
-  }
-  return userId;
-};
+// The guest id comes from the server-signed session token issued at login.
+// It is used for UI hints only; the server re-derives it for every write.
+export const getUserId = (): string | null => getGuestId();
 
 const isWithin24Hours = (dateString: string): boolean => {
   const uploadDate = new Date(dateString);
@@ -69,7 +63,7 @@ const isWithin24Hours = (dateString: string): boolean => {
 export function useWeddingPhotos() {
   const [uploadedPhotos, setUploadedPhotos] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const currentUserId = getUserId();
+  const currentUserId = getGuestId();
 
   const fetchPhotos = async () => {
     // PostgREST caps a single request at 1000 rows, so page through the table
@@ -109,7 +103,7 @@ export function useWeddingPhotos() {
           filePath: photo.file_path,
           isUploaded: true,
           isNew: isWithin24Hours(photo.created_at),
-          canDelete: photo.uploaded_by === currentUserId,
+          canDelete: !!currentUserId && photo.uploaded_by === currentUserId,
         };
       });
       setUploadedPhotos(photos);
@@ -117,20 +111,15 @@ export function useWeddingPhotos() {
     setIsLoading(false);
   };
 
-  const deletePhoto = async (photoId: string, filePath: string) => {
-    // Delete from storage
-    await supabase.storage.from('wedding-photos').remove([filePath]);
-    
-    // Delete from database
-    const { error } = await supabase
-      .from('wedding_photos')
-      .delete()
-      .eq('id', photoId);
+  // Deletion (storage file + database row) is performed server-side after the
+  // edge function verifies ownership from the signed session token.
+  const deletePhoto = async (photoId: string, _filePath: string) => {
+    const { error } = await callGuestApi('delete_photo', { id: photoId });
 
     if (!error) {
       setUploadedPhotos((prev) => prev.filter((p) => p.id !== photoId));
     }
-    
+
     return { error };
   };
 
@@ -161,7 +150,7 @@ export function useWeddingPhotos() {
               filePath: photo.file_path,
               isUploaded: true,
               isNew: true,
-              canDelete: photo.uploaded_by === currentUserId,
+              canDelete: !!currentUserId && photo.uploaded_by === currentUserId,
             }, ...prev]);
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as WeddingPhoto).id;
