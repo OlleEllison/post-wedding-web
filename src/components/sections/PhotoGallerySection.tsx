@@ -11,8 +11,40 @@ import JSZip from 'jszip';
 const ZIP_THRESHOLD = 5; // Download as ZIP if more than this many images
 const MAX_ZIP_IMAGES = 300; // Larger ZIPs can crash the browser tab
 
-const IMAGES_PER_PAGE = 100;
+const IMAGES_PER_PAGE = 49;
 const MAX_COLUMNS = 10;
+
+// Downscale huge phone/camera photos in the browser before uploading, so the
+// gallery serves reasonable files instead of 5-10 MB originals.
+const MAX_UPLOAD_DIMENSION = 2400;
+
+const compressImage = async (file: File): Promise<File> => {
+  try {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 1_500_000) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.82)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+      type: 'image/jpeg',
+    });
+  } catch {
+    return file;
+  }
+};
+
 
 export const PhotoGallerySection: React.FC = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
