@@ -764,10 +764,11 @@ export const PhotoGallerySection: React.FC = () => {
                 </button>
                 
                 <img
-                  src={allImages[selectedImageIndex].src}
+                  src={allImages[selectedImageIndex].previewSrc || allImages[selectedImageIndex].src}
                   alt={allImages[selectedImageIndex].alt}
                   className="max-w-[85vw] max-h-[75vh] object-contain rounded-lg"
                 />
+
                 
                 <div className="flex items-center gap-4">
                   <span className="text-white text-sm">
