@@ -17,12 +17,23 @@ interface WeddingPhoto {
 export interface GalleryImage {
   id?: string;
   src: string;
+  /** Small, server-resized version for grid tiles */
+  thumbSrc?: string;
+  /** Medium, server-resized version for hero/lightbox */
+  previewSrc?: string;
   alt: string;
   filePath?: string;
   isUploaded?: boolean;
   isNew?: boolean;
   canDelete?: boolean;
 }
+
+// Supabase image transformation endpoint keeps the browser from downloading
+// multi-megabyte originals just to render a thumbnail.
+const resized = (publicUrl: string, width: number, quality: number) =>
+  publicUrl.replace('/object/public/', '/render/image/public/') +
+  `?width=${width}&quality=${quality}`;
+
 
 // The guest id comes from the server-signed session token issued at login.
 // It is used for UI hints only; the server re-derives it for every write.
