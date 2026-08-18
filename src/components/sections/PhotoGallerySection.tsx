@@ -362,27 +362,6 @@ export const PhotoGallerySection: React.FC = () => {
   }, [selectedImageIndex, closeLightbox, goToPrevious, goToNext]);
 
 
-  const handleDeletePhoto = async (photoId: string, filePath: string) => {
-    setIsDeleting(true);
-    const { error } = await deletePhoto(photoId, filePath);
-    if (error) {
-      toast({
-        title: "Kunde inte ta bort",
-        description: "Något gick fel vid borttagning av bilden.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Borttagen",
-        description: "Bilden har tagits bort.",
-      });
-      if (selectedImageIndex !== null && selectedImageIndex >= allImages.length - 1) {
-        setSelectedImageIndex(Math.max(0, allImages.length - 2));
-      }
-    }
-    setIsDeleting(false);
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -724,20 +703,6 @@ export const PhotoGallerySection: React.FC = () => {
                           Nytt
                         </div>
                       )}
-                      {image.canDelete && !isSelectMode && !isDeleteMode && (
-                        <button
-                          className="absolute bottom-1 right-1 bg-destructive/80 text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (image.id && image.filePath) {
-                              handleDeletePhoto(image.id, image.filePath);
-                            }
-                          }}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
                     </div>
                   );
                 })}
@@ -805,28 +770,9 @@ export const PhotoGallerySection: React.FC = () => {
                 />
 
                 
-                <div className="flex items-center gap-4">
-                  <span className="text-white text-sm">
-                    {selectedImageIndex + 1} / {allImages.length}
-                  </span>
-                  {allImages[selectedImageIndex]?.canDelete && (
-                    <button
-                      className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded-full text-sm flex items-center gap-1 hover:bg-destructive transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const img = allImages[selectedImageIndex];
-                        if (img.id && img.filePath) {
-                          handleDeletePhoto(img.id, img.filePath);
-                          closeLightbox();
-                        }
-                      }}
-                      disabled={isDeleting}
-                    >
-                      <Trash2 size={14} />
-                      Ta bort
-                    </button>
-                  )}
-                </div>
+                <span className="text-white text-sm">
+                  {selectedImageIndex + 1} / {allImages.length}
+                </span>
               </div>
               
               <button
