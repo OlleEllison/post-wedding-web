@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { WeddingRings } from '../WeddingRings';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
@@ -6,7 +6,14 @@ import { useWeddingPhotos } from '@/hooks/useWeddingPhotos';
 export const HeroSection: React.FC = () => {
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const { allImages } = useWeddingPhotos();
+  const { allImages: sourceImages } = useWeddingPhotos();
+  // Keep only a small rotating set in the DOM so the hero stays fast
+  // even when thousands of photos have been uploaded.
+  const MAX_HERO_IMAGES = 20;
+  const allImages = useMemo(
+    () => sourceImages.slice(0, MAX_HERO_IMAGES),
+    [sourceImages]
+  );
 
   // Reset index if it exceeds the current array length (e.g., after image deletion)
   useEffect(() => {
@@ -58,6 +65,8 @@ export const HeroSection: React.FC = () => {
                     key={index}
                     src={image.src}
                     alt={image.alt}
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
                     className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
                       index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                     }`}

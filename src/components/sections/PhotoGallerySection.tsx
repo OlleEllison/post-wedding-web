@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
 
 const ZIP_THRESHOLD = 5; // Download as ZIP if more than this many images
+const MAX_ZIP_IMAGES = 300; // Larger ZIPs can crash the browser tab
 
 const IMAGES_PER_PAGE = 100;
 const MAX_COLUMNS = 10;
@@ -81,6 +82,11 @@ export const PhotoGallerySection: React.FC = () => {
   };
 
   const downloadAsZip = async (indices: Set<number>) => {
+    if (indices.size > MAX_ZIP_IMAGES) {
+      throw new Error(
+        `För många bilder valda (${indices.size}). Välj max ${MAX_ZIP_IMAGES} bilder åt gången.`
+      );
+    }
     const zip = new JSZip();
     const folder = zip.folder('brollopsbilder');
     
@@ -524,6 +530,8 @@ export const PhotoGallerySection: React.FC = () => {
                       <img
                         src={image.src}
                         alt={image.alt}
+                        loading="lazy"
+                        decoding="async"
                         className={`w-full h-full object-cover transition-opacity ${
                           isSelectMode && isSelected ? 'opacity-80' : ''
                         }`}
