@@ -9,7 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
 
 const ZIP_THRESHOLD = 5; // Download as ZIP if more than this many images
-const MAX_ZIP_IMAGES = 300; // Larger ZIPs can crash the browser tab
+// Large selections are split into sequential archives to keep browser memory
+// bounded while still downloading every selected image.
+const ZIP_IMAGES_PER_PART = 50;
 
 const IMAGES_PER_PAGE = 49;
 const MAX_COLUMNS = 10;
@@ -55,6 +57,7 @@ export const PhotoGallerySection: React.FC = () => {
   const [selectedForDownload, setSelectedForDownload] = useState<Set<number>>(new Set());
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<Set<number>>(new Set());
+  const [downloadProgress, setDownloadProgress] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { allImages, isLoading, deletePhoto } = useWeddingPhotos();
@@ -112,13 +115,6 @@ export const PhotoGallerySection: React.FC = () => {
     setSelectedForDownload(new Set());
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const deletableCount = useMemo(
-    () => allImages.filter((img) => img.canDelete).length,
-    [allImages]
-  );
-
-
   const toggleImageForDelete = (globalIndex: number) => {
     setSelectedForDelete((prev) => {
       const newSet = new Set(prev);
@@ -138,12 +134,13 @@ export const PhotoGallerySection: React.FC = () => {
     setIsDeleting(true);
     const targets = Array.from(selectedForDelete)
       .map((i) => allImages[i])
-      .filter((img) => img && img.canDelete && img.id && img.filePath);
+      .filter((img) => img && img.id && img.filePath);
 
     let removed = 0;
     let failed = 0;
     for (const img of targets) {
-      const { error } = await deletePhoto(img!.id as string, img!.filePath as string);
+      if (!img.id || !img.filePath) continue;
+      const { error } = await deletePhoto(img.id, img.filePath);
       if (error) failed++;
       else removed++;
     }
@@ -171,52 +168,67 @@ export const PhotoGallerySection: React.FC = () => {
   };
 
   const downloadAsZip = async (indices: Set<number>) => {
-    if (indices.size > MAX_ZIP_IMAGES) {
-      throw new Error(
-        `För många bilder valda (${indices.size}). Välj max ${MAX_ZIP_IMAGES} bilder åt gången.`
+    const images = Array.from(indices)
+      .map((index) => allImages[index])
+      .filter((image): image is NonNullable<typeof image> => Boolean(image));
+    const totalParts = Math.ceil(images.length / ZIP_IMAGES_PER_PART);
+    let downloaded = 0;
+    let failed = 0;
+
+    for (let partIndex = 0; partIndex < totalParts; partIndex++) {
+      const partImages = images.slice(
+        partIndex * ZIP_IMAGES_PER_PART,
+        (partIndex + 1) * ZIP_IMAGES_PER_PART
       );
-    }
-    const zip = new JSZip();
-    const folder = zip.folder('brollopsbilder');
-    
-    if (!folder) {
-      throw new Error('Could not create ZIP folder');
-    }
+      const zip = new JSZip();
+      const folder = zip.folder('brollopsbilder');
+      if (!folder) throw new Error('Kunde inte skapa ZIP-mappen.');
 
-    let count = 0;
-    for (const index of indices) {
-      const image = allImages[index];
-      if (!image) continue;
+      for (const image of partImages) {
+        setDownloadProgress(
+          `Hämtar bild ${downloaded + failed + 1} av ${images.length} • ZIP ${partIndex + 1} av ${totalParts}`
+        );
+        try {
+          const response = await fetch(image.src);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const blob = await response.blob();
+          const ext = blob.type.split('/')[1]?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+          const baseName = (image.alt || `brollop-bild.${ext}`)
+            .replace(/[\\/:*?"<>|]/g, '-')
+            .slice(0, 160);
+          folder.file(`${String(downloaded + 1).padStart(4, '0')}-${baseName}`, blob);
+          downloaded++;
+        } catch (error) {
+          failed++;
+          console.error('Failed to fetch image:', error);
+        }
+      }
 
-      try {
-        const response = await fetch(image.src);
-        const blob = await response.blob();
-        
-        // Get file extension from blob type or default to jpg
-        const ext = blob.type.split('/')[1] || 'jpg';
-        const fileName = image.alt || `brollop-bild-${count + 1}.${ext}`;
-        
-        folder.file(fileName, blob);
-        count++;
-      } catch (error) {
-        console.error(`Failed to fetch image ${index}:`, error);
+      if (Object.keys(zip.files).length > 1) {
+        setDownloadProgress(`Skapar ZIP ${partIndex + 1} av ${totalParts}...`);
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'STORE',
+          streamFiles: true,
+        });
+        const url = window.URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = totalParts === 1
+          ? 'brollopsbilder.zip'
+          : `brollopsbilder-del-${partIndex + 1}-av-${totalParts}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
-    // Generate ZIP file
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    
-    // Download the ZIP
-    const url = window.URL.createObjectURL(zipBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'brollopsbilder.zip';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    return count;
+    if (failed > 0) {
+      throw new Error(`${downloaded} bilder laddades ner, men ${failed} kunde inte hämtas.`);
+    }
+    return downloaded;
   };
 
   const downloadIndividually = async (indices: Set<number>) => {
@@ -284,6 +296,7 @@ export const PhotoGallerySection: React.FC = () => {
       });
     }
 
+    setDownloadProgress('');
     setIsDownloading(false);
   };
 
@@ -318,6 +331,7 @@ export const PhotoGallerySection: React.FC = () => {
       });
     }
 
+    setDownloadProgress('');
     setIsDownloading(false);
   };
 
@@ -516,7 +530,7 @@ export const PhotoGallerySection: React.FC = () => {
                   </Button>
                 </div>
                 <p className="text-[10px] text-destructive font-medium">
-                  Klicka på bilderna du vill ta bort • du kan bara ta bort dina egna bilder
+                  Klicka på bilderna du vill ta bort
                 </p>
               </div>
             ) : !isSelectMode ? (
@@ -582,7 +596,7 @@ export const PhotoGallerySection: React.FC = () => {
                     {isDownloading ? (
                       <>
                         <Loader2 className="mr-2 animate-spin" size={16} />
-                        Skapar ZIP...
+                        Förbereder ZIP...
                       </>
                     ) : (
                       <>
@@ -616,8 +630,9 @@ export const PhotoGallerySection: React.FC = () => {
                 </div>
                 
                 <p className="text-[10px] text-primary font-medium">
-                  Klicka på bilderna du vill ladda ner • {selectedForDownload.size} av {allImages.length} valda
-                  {selectedForDownload.size > ZIP_THRESHOLD && ' • Laddas ner som ZIP'}
+                  {downloadProgress || `Klicka på bilderna du vill ladda ner • ${selectedForDownload.size} av ${allImages.length} valda${
+                    selectedForDownload.size > ZIP_THRESHOLD ? ' • Laddas ner som ZIP' : ''
+                  }`}
                 </p>
               </div>
             )}
@@ -653,12 +668,10 @@ export const PhotoGallerySection: React.FC = () => {
                       key={image.id || index}
                       className={`relative overflow-hidden rounded-sm cursor-pointer transform hover:scale-105 hover:z-10 transition-all duration-300 group ${
                         isSelectMode && isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
-                      } ${isDeleteMode && isMarkedForDelete ? 'ring-2 ring-destructive ring-offset-1' : ''} ${
-                        isDeleteMode && !image.canDelete ? 'opacity-40 cursor-not-allowed' : ''
-                      }`}
+                      } ${isDeleteMode && isMarkedForDelete ? 'ring-2 ring-destructive ring-offset-1' : ''}`}
                       onClick={() => {
                         if (isDeleteMode) {
-                          if (image.canDelete) toggleImageForDelete(globalIndex);
+                          toggleImageForDelete(globalIndex);
                         } else if (isSelectMode) {
                           toggleImageSelection(globalIndex);
                         } else {
@@ -688,7 +701,7 @@ export const PhotoGallerySection: React.FC = () => {
                         </div>
                       )}
                       
-                      {isDeleteMode && image.canDelete && (
+                      {isDeleteMode && (
                         <div className={`absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                           isMarkedForDelete
                             ? 'bg-destructive text-destructive-foreground'
