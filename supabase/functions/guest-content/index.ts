@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           file_path: p.file_path,
           file_name: p.file_name,
           created_at: p.created_at,
-          canDelete: p.uploaded_by === guestId,
+          canDelete: true,
         }));
         return json({ photos });
       }
@@ -220,16 +220,13 @@ Deno.serve(async (req) => {
           .eq("id", id)
           .maybeSingle();
         if (fetchError) throw fetchError;
-        if (!photo || photo.uploaded_by !== guestId) {
-          return json({ error: "Du kan bara ta bort dina egna bilder" }, 403);
-        }
+        if (!photo) return json({ error: "Bilden kunde inte hittas" }, 404);
         // Service role bypasses storage RLS, so the file is really removed.
         await supabase.storage.from("wedding-photos").remove([photo.file_path]);
         const { error } = await supabase
           .from("wedding_photos")
           .delete()
-          .eq("id", id)
-          .eq("uploaded_by", guestId);
+          .eq("id", id);
         if (error) throw error;
         return json({ success: true });
       }
